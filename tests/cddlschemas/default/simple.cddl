@@ -1,0 +1,5 @@
+; Simple person schema for CBOR / CDDL tests
+person = {
+  name: tstr,
+  age: uint,
+}

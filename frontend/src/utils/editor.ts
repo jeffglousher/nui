@@ -7,6 +7,7 @@ export enum MSG_FORMAT {
 	XML = "xml",
 	HTML = "html",
 	PROTOBUF = "protobuf",
+	CBOR = "cbor",
 }
 export enum MSG_FORMAT_EDIT {
 	JSON = "json",
@@ -61,6 +62,8 @@ export function toFormat(text: string, format: MSG_FORMAT): string {
 		case MSG_FORMAT.HTML:
 			return text
 		case MSG_FORMAT.PROTOBUF:
+			return text
+		case MSG_FORMAT.CBOR:
 			return text
 	}
 }

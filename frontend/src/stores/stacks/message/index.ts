@@ -50,7 +50,7 @@ const setup = {
 			const msgSo = <MessageStore>store
 			const payload = msgSo.state.message?.payload ?? ""
 			const format = msgSo.state.format
-			if (format != MSG_FORMAT.BASE64 && format != MSG_FORMAT.HEX && format != MSG_FORMAT.PROTOBUF) {
+			if (format != MSG_FORMAT.BASE64 && format != MSG_FORMAT.HEX && format != MSG_FORMAT.PROTOBUF && format != MSG_FORMAT.CBOR) {
 				return binaryStringToString(payload)
 			}
 			return payload
