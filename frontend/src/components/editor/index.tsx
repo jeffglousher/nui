@@ -200,7 +200,8 @@ const EditorCodeBase: ForwardRefRenderFunction<EditorRefProps, Props> = ({
 			text={value}
 		/>
 	}
-	if (format == MSG_FORMAT.CBOR) {
+	// while editing, CBOR is written as diagnostic notation and encoded on send
+	if (format == MSG_FORMAT.CBOR && readOnly) {
 		return <CborCmp style={{ flex: 1, overflowY: "auto" }}
 			text={value}
 		/>

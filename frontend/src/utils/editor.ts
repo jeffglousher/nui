@@ -1,3 +1,5 @@
+import { encodeCborPayload } from "@/utils/cbor"
+import { stringToBinaryString } from "@/utils/string"
 
 export enum MSG_FORMAT {
 	JSON = "json",
@@ -14,6 +16,7 @@ export enum MSG_FORMAT_EDIT {
 	TEXT = "text",
 	XML = "xml",
 	HTML = "html",
+	CBOR = "cbor",
 }
 
 /** trasforma una stringa in un JSON gestendo gl errori */
@@ -66,4 +69,15 @@ export function toFormat(text: string, format: MSG_FORMAT): string {
 		case MSG_FORMAT.CBOR:
 			return text
 	}
+}
+
+/**
+ * turns the editor text into the payload to send
+ * CBOR is written as diagnostic notation, of which JSON is a subset, and encoded here
+ */
+export function toPayload(text: string, format: MSG_FORMAT): { payload?: string, error?: string } {
+	if (format != MSG_FORMAT.CBOR) return { payload: stringToBinaryString(text) }
+	const encoded = encodeCborPayload(text)
+	if (!encoded.success) return { error: [encoded.error, ...encoded.validationErrors ?? []].join("\n") }
+	return { payload: encoded.payload }
 }
