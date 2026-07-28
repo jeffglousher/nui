@@ -10,10 +10,7 @@ interface Props {
 }
 
 const CborRow: FunctionComponent<Props> = ({ text, style, subject }) => {
-  const { selectedSchema, selectedRule, decodedData, showSchemaControls } = useCddlSchema(
-    text,
-    subject,
-  )
+  const { selectedSchema, selectedRule, decodedData } = useCddlSchema(text, subject)
 
   const schemaInfo = useMemo(() => {
     if (!selectedSchema || !selectedRule) return null
@@ -27,12 +24,11 @@ const CborRow: FunctionComponent<Props> = ({ text, style, subject }) => {
   if (!text) return null
 
   if (decodedData?.dataJson) {
+    const validationError = decodedData.validationErrors?.[0]
     return (
       <div style={style}>
         {schemaInfo && <div style={cssSchemaInfo}>{schemaInfo}</div>}
-        {decodedData.error && (
-          <TextRow text={`CDDL: ${decodedData.error}`} error />
-        )}
+        {validationError && <TextRow text={`CDDL: ${validationError}`} error />}
         <JsonRow text={decodedData.dataJson} />
       </div>
     )
@@ -42,22 +38,14 @@ const CborRow: FunctionComponent<Props> = ({ text, style, subject }) => {
     return (
       <div style={style}>
         {schemaInfo && <div style={cssSchemaInfo}>{schemaInfo}</div>}
-        <TextRow text={`CBOR decode failed: ${decodedData.error}`} error />
-      </div>
-    )
-  }
-
-  if (showSchemaControls || !selectedSchema || !selectedRule) {
-    return (
-      <div style={style}>
-        <TextRow text="CBOR: decoding..." />
+        <TextRow text={decodedData.error} error />
       </div>
     )
   }
 
   return (
     <div style={style}>
-      <TextRow text="Decoding CBOR message..." />
+      <TextRow text="CBOR: decoding..." />
     </div>
   )
 }

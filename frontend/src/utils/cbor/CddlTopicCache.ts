@@ -1,7 +1,7 @@
-import { TopicTrie, TrieNode, SchemaMapping } from "@/utils/protobuf/TopicTrie"
-import { ProtobufValidator } from "@/utils/protobuf/validation"
+import { TopicTrie, TrieNode, SchemaMapping } from '@/utils/protobuf/TopicTrie'
+import { ProtobufValidator } from '@/utils/protobuf/validation'
 
-const STORAGE_KEY = "nats-cddl-patterns"
+const STORAGE_KEY = 'nats-cddl-patterns'
 const STORAGE_VERSION = 1
 const CLEANUP_MIN_CONFIDENCE = 0.2
 const MIN_TERMINALS_FOR_PATTERN_LEARNING = 5
@@ -39,16 +39,16 @@ export class CddlTopicCache {
 
   constructor() {
     this.load()
-    if (typeof window !== "undefined") {
-      window.addEventListener("beforeunload", this.saveOnUnload)
-      window.addEventListener("storage", this.onStorageChange)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', this.saveOnUnload)
+      window.addEventListener('storage', this.onStorageChange)
     }
   }
 
   dispose(): void {
-    if (typeof window !== "undefined") {
-      window.removeEventListener("beforeunload", this.saveOnUnload)
-      window.removeEventListener("storage", this.onStorageChange)
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('beforeunload', this.saveOnUnload)
+      window.removeEventListener('storage', this.onStorageChange)
     }
   }
 
@@ -67,7 +67,7 @@ export class CddlTopicCache {
       this.dirty = true
       this.save()
     } catch (error) {
-      console.warn("Failed to cache successful CDDL decode:", error)
+      console.warn('Failed to cache successful CDDL decode:', error)
     }
   }
 
@@ -86,7 +86,7 @@ export class CddlTopicCache {
   clear(): void {
     this.trie = new TopicTrie()
     this.dirty = false
-    if (typeof localStorage !== "undefined") {
+    if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY)
     }
   }
@@ -108,7 +108,7 @@ export class CddlTopicCache {
       if (node.isTerminal && node.mapping) {
         const mapping = node.mapping
         if (mapping.schema === schema && mapping.messageType === rule && mapping.confidence === 1.0) {
-          const topicPath = path.join(".")
+          const topicPath = path.join('.')
           if (topicPath !== currentTopic && topicPath.length > 0) {
             similarTopics.push(topicPath)
           }
@@ -120,7 +120,7 @@ export class CddlTopicCache {
         }
       }
       if (node.wildcard) {
-        traverseNode(node.wildcard, [...path, "*"])
+        traverseNode(node.wildcard, [...path, '*'])
       }
     }
     traverseNode(this.trie.getRoot())
@@ -128,12 +128,12 @@ export class CddlTopicCache {
   }
 
   private save(): void {
-    if (typeof localStorage === "undefined" || !this.dirty) return
+    if (typeof localStorage === 'undefined' || !this.dirty) return
     try {
       localStorage.setItem(STORAGE_KEY, this.serialize(this.trie.getRoot()))
       this.dirty = false
     } catch (error) {
-      if (error instanceof Error && error.name === "QuotaExceededError") {
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
         this.trie.cleanup(CLEANUP_MIN_CONFIDENCE)
         try {
           localStorage.setItem(STORAGE_KEY, this.serialize(this.trie.getRoot()))
@@ -146,7 +146,7 @@ export class CddlTopicCache {
   }
 
   private load(): void {
-    if (typeof localStorage === "undefined") return
+    if (typeof localStorage === 'undefined') return
     try {
       const data = localStorage.getItem(STORAGE_KEY)
       if (data) {
@@ -187,7 +187,7 @@ export class CddlTopicCache {
   private deserialize(data: string): TrieNode {
     const parsed: SerializedTrie = JSON.parse(data)
     if (parsed.version !== STORAGE_VERSION) {
-      throw new Error("Version mismatch")
+      throw new Error('Version mismatch')
     }
     const fromJSON = (obj: SerializedNode): TrieNode => {
       const node: TrieNode = {

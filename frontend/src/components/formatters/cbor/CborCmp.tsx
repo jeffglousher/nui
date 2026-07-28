@@ -35,7 +35,7 @@ const CborCmp: FunctionComponent<Props> = ({ text, style, subject }) => {
   }
 
   const hasValidSelection = !!(selectedSchemaId && selectedRule)
-  const cddlValid = !!(decodedData?.success && selectedRule && !decodedData.validationErrors?.length)
+  const cddlValid = decodedData?.valid === true
 
   return (
     <div style={{ ...style, ...styles.container }}>

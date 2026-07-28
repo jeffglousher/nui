@@ -26,10 +26,10 @@ const CborDecoder: FunctionComponent<CborDecoderProps> = ({
     )
   }
 
-  if (decodedData?.error && !decodedData.dataJson) {
+  if (decodedData?.error) {
     return (
       <div style={styles.errorContainer}>
-        Error: {decodedData.error}
+        {decodedData.error}
         {binaryData && (
           <details style={styles.debugInfo}>
             <summary>Debug Info</summary>
@@ -48,10 +48,6 @@ const CborDecoder: FunctionComponent<CborDecoderProps> = ({
 
   if (schema?.error) {
     return <div style={styles.errorContainer}>Schema Error: {schema.error}</div>
-  }
-
-  if (decodedData?.error && decodedData.dataJson) {
-    return <div style={styles.errorContainer}>CDDL: {decodedData.error}</div>
   }
 
   return null
