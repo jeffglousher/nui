@@ -797,8 +797,12 @@ func (s *NuiTestSuite) TestCddlschemas() {
 	e.GET("/api/cddl/simple").Expect().Status(http.StatusOK).
 		JSON().Object().Value("id").String().Equal("simple")
 
-	content := e.GET("/api/cddl/simple/content").Expect().Status(http.StatusOK).Body().Raw()
-	s.Contains(content, "person")
+	res := e.GET("/api/cddl/simple/content").Expect().Status(http.StatusOK)
+	res.Header("Content-Type").Contains("text/plain")
+	s.Contains(res.Body().Raw(), "person")
+
+	e.GET("/api/cddl/unknown").Expect().Status(http.StatusNotFound)
+	e.GET("/api/cddl/unknown/content").Expect().Status(http.StatusNotFound)
 }
 
 func TestNuiTestSuite(t *testing.T) {

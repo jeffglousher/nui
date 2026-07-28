@@ -76,7 +76,11 @@ func (r *FileSystemCddlRepo) GetByIdInPath(id, dir string) (*CddlSchema, error) 
 	}
 
 	// Accept both slash styles in IDs from the API
-	cleanID := filepath.FromSlash(id)
+	cleanID := filepath.Clean(filepath.FromSlash(id))
+	// IDs come from the API: keep the lookup inside the schemas directory
+	if filepath.IsAbs(cleanID) || cleanID == ".." || strings.HasPrefix(cleanID, ".."+string(filepath.Separator)) {
+		return nil, errors.New("schema not found")
+	}
 	filePath := filepath.Join(dir, cleanID+".cddl")
 	relPath := filepath.ToSlash(cleanID + ".cddl")
 
