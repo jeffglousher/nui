@@ -14,6 +14,8 @@
 import { describe, test, expect, beforeAll } from 'vitest'
 import { MSG_FORMAT, toPayload } from '@/utils/editor'
 import { decodeAndValidateCbor } from './index'
+import { CborEntry, CborField, deriveShape } from './shape'
+import { CborRowsValue, CborValue, emptyValue, toJsValue, toNotation } from './value'
 
 const API = 'http://localhost:31311/api'
 const SUBJECT = 'test.person'
@@ -35,6 +37,14 @@ async function api(path: string, body?: unknown) {
   } catch {
     return text
   }
+}
+
+/** Something a field will take, whatever the fixture schema asks for */
+function sampleOf(field: CborField): CborValue {
+  if (field.kind == 'bool') return { kind: 'bool', on: true }
+  if (field.kind == 'number') return { kind: 'scalar', text: '45' }
+  if (field.kind == 'bytes') return { kind: 'scalar', text: 'dead', encoding: 'hex' }
+  return { kind: 'scalar', text: 'grace' }
 }
 
 /** publish exactly the way the send card does: toPayload, then base64 */
@@ -114,5 +124,28 @@ describe.runIf(process.env.NUI_E2E)('CBOR over the NUI API', () => {
 
     expect(decoded.success).toBe(false)
     expect(decoded.error).toMatch(/^CBOR decode failed: /)
+  })
+
+  test('should carry a payload built from the fields of its rule', async () => {
+    const before = (await received()).length
+    const { field } = deriveShape(personSchema.content, 'person')
+    const entries = (field as { entries: CborEntry[] }).entries
+
+    // fill in the members the rule requires, as the form lays them out
+    const { rows } = emptyValue(field) as CborRowsValue
+    const value: CborValue = {
+      kind: 'rows',
+      rows: rows.map(row => ({ ...row, value: sampleOf(entries[row.entry].value) })),
+    }
+    const { text, errors } = toNotation(field, value)
+
+    expect(errors).toEqual([])
+    expect(await publish(text, MSG_FORMAT.CBOR)).toEqual({ error: undefined })
+
+    const payloads = await received()
+    const decoded = decodeAndValidateCbor(payloads[before], personSchema, 'person')
+
+    expect(decoded.data).toEqual(toJsValue(field, value).value)
+    expect(decoded.valid).toBe(true)
   })
 })

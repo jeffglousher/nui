@@ -1,5 +1,5 @@
 import { encodeCborPayload } from "@/utils/cbor"
-import { stringToBinaryString } from "@/utils/string"
+import { binaryStringToString, stringToBinaryString } from "@/utils/string"
 
 export enum MSG_FORMAT {
 	JSON = "json",
@@ -71,12 +71,27 @@ export function toFormat(text: string, format: MSG_FORMAT): string {
 	}
 }
 
+/** the formats whose viewer reads the bytes of the payload rather than its text */
+const BINARY_FORMATS = [MSG_FORMAT.HEX, MSG_FORMAT.BASE64, MSG_FORMAT.PROTOBUF, MSG_FORMAT.CBOR]
+
+/**
+ * turns a payload into the text of the editor showing it
+ * a binary format is handed the payload as it arrived: decoding it as UTF-8 would corrupt it
+ */
+export function toEditorText(payload: string, format: MSG_FORMAT): string {
+	if (BINARY_FORMATS.includes(format)) return payload ?? ""
+	return binaryStringToString(payload ?? "")
+}
+
 /**
  * turns the editor text into the payload to send
  * CBOR is written as diagnostic notation, of which JSON is a subset, and encoded here
  */
 export function toPayload(text: string, format: MSG_FORMAT): { payload?: string, error?: string } {
 	if (format != MSG_FORMAT.CBOR) return { payload: stringToBinaryString(text) }
+	// the fields write nothing at all while the rule is still waiting on one of
+	// them, and "the payload is empty" is not what the writer needs to hear
+	if (!text?.trim()) return { error: "there is nothing to send yet" }
 	const encoded = encodeCborPayload(text)
 	if (!encoded.success) return { error: [encoded.error, ...encoded.validationErrors ?? []].join("\n") }
 	return { payload: encoded.payload }

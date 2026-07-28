@@ -15,6 +15,10 @@ interface SchemaSelectorProps {
   onAutoDetect: () => void
   onDone?: () => void
   showDoneButton?: boolean
+  /** unset where there is no payload to detect a rule from, as when writing one */
+  showAutoDetect?: boolean
+  /** both choices on one line, without the words that repeat what the lists say */
+  compact?: boolean
 }
 
 const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
@@ -30,9 +34,11 @@ const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
   onAutoDetect,
   onDone,
   showDoneButton = false,
+  showAutoDetect = true,
+  compact = false,
 }) => {
   return (
-    <div style={styles.controls}>
+    <div style={compact ? styles.controlsCompact : styles.controls}>
       {(isAutoDetecting || isLoadingSchemas) && (
         <div style={styles.statusMessage}>
           {isLoadingSchemas
@@ -42,7 +48,7 @@ const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
       )}
 
       <div style={styles.controlGroup}>
-        <label style={styles.controlLabel}>Schema:</label>
+        {!compact && <label style={styles.controlLabel}>Schema:</label>}
         {schemas.length > 0 ? (
           <>
             <select
@@ -62,8 +68,9 @@ const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
               onClick={onRefreshSchemas}
               disabled={isLoadingSchemas}
               style={styles.buttonSmall}
+              title="look for .cddl files again"
             >
-              Refresh
+              {compact ? "\u21bb" : "Refresh"}
             </button>
           </>
         ) : (
@@ -75,22 +82,25 @@ const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
 
       {selectedSchemaId && availableRules.length > 0 && (
         <div style={styles.controlGroup}>
-          <label style={styles.controlLabel}>Rule:</label>
+          {!compact && <label style={styles.controlLabel}>Type:</label>}
           <select
             value={selectedRule}
             onChange={(e) => onRuleChange(e.target.value)}
             style={styles.select}
+            title="the CDDL rule the payload is written as (helpers like uuid stay available)"
           >
-            <option value="">Select rule...</option>
+            <option value="">Select type...</option>
             {availableRules.map((rule) => (
               <option key={rule} value={rule}>
                 {rule}
               </option>
             ))}
           </select>
-          <button onClick={onAutoDetect} disabled={isAutoDetecting} style={styles.buttonSmall}>
-            {isAutoDetecting ? "Detecting..." : "Auto-detect"}
-          </button>
+          {showAutoDetect && (
+            <button onClick={onAutoDetect} disabled={isAutoDetecting} style={styles.buttonSmall}>
+              {isAutoDetecting ? "Detecting..." : "Auto-detect"}
+            </button>
+          )}
           {showDoneButton && onDone && (
             <button onClick={onDone} style={styles.buttonSmall}>
               Done

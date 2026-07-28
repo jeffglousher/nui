@@ -25,9 +25,10 @@ describe('toPayload', () => {
     expect(result.error).toMatch(/^CBOR encode failed: /);
   });
 
-  it('should report an empty CBOR payload', () => {
+  it('should say a CBOR payload nobody has written yet is not ready', () => {
     const result = toPayload('', MSG_FORMAT.CBOR);
-    expect(result.error).toContain('empty');
+    expect(result.error).toBe('there is nothing to send yet');
+    expect(result.payload).toBeUndefined();
   });
 
 });

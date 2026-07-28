@@ -2,6 +2,7 @@ import Base64Cmp from "@/components/formatters/base64/Base64Cmp"
 import HexTable from "@/components/formatters/hex/HexTable"
 import ProtobufCmp from "@/components/formatters/protobuf/ProtobufCmp"
 import CborCmp from "@/components/formatters/cbor/CborCmp"
+import CborForm from "@/components/formatters/cbor/CborForm"
 import { getEditorLanguage } from "@/stores/stacks/message/utils"
 import { MSG_FORMAT } from "@/utils/editor"
 import { delay, throttle, throttle2 } from "@/utils/time"
@@ -23,6 +24,8 @@ interface Props {
 	/** displays the differences */
 	diff?: boolean
 	className?: string
+	/** the subject the payload travels on, which says which CDDL rule it carries */
+	subject?: string
 
 	onChange?: (value: string) => void
 }
@@ -38,6 +41,7 @@ const EditorCodeBase: ForwardRefRenderFunction<EditorRefProps, Props> = ({
 	autoFormat,
 	diff,
 	className,
+	subject,
 	onChange,
 }, ref) => {
 
@@ -200,11 +204,19 @@ const EditorCodeBase: ForwardRefRenderFunction<EditorRefProps, Props> = ({
 			text={value}
 		/>
 	}
-	// while editing, CBOR is written as diagnostic notation and encoded on send
-	if (format == MSG_FORMAT.CBOR && readOnly) {
-		return <CborCmp style={{ flex: 1, overflowY: "auto" }}
-			text={value}
-		/>
+	if (format == MSG_FORMAT.CBOR) {
+		// reading shows the payload as it arrived; writing shows the fields of its
+		// rule, and the diagnostic notation they produce is what gets encoded
+		return readOnly
+			? <CborCmp style={{ flex: 1, overflowY: "auto" }}
+				text={value}
+				subject={subject}
+			/>
+			: <CborForm style={{ flex: 1, overflowY: "auto" }}
+				text={value}
+				subject={subject}
+				onChange={onChange}
+			/>
 	}
 	return (
 		<Editor

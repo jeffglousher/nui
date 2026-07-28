@@ -48,7 +48,7 @@ func Setup(dbPath, protoschemasPath, cddlschemasPath string, logger logging.Slog
 	if err != nil {
 		return nil, err
 	}
-	n.CddlRepo, err = cddlschema.NewFileSystemCddlRepo(cddlDir)
+	n.CddlRepo, err = cddlschema.NewFileSystemCddlRepo(cddlDir, logger)
 	if err != nil {
 		return nil, err
 	}

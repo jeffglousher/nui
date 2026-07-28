@@ -70,6 +70,7 @@ const CborCmp: FunctionComponent<Props> = ({ text, style, subject }) => {
         binaryData={text}
         selectedSchemaId={selectedSchemaId}
         selectedRule={selectedRule}
+        schema={selectedSchema}
       />
     </div>
   )

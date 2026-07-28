@@ -9,6 +9,7 @@ import (
 func (a *App) HandleIndexCddlSchemas(c *fiber.Ctx) error {
 	schemas, err := a.nui.CddlRepo.All()
 	if err != nil {
+		a.l.Error("cannot list cddl schemas", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -17,6 +18,8 @@ func (a *App) HandleIndexCddlSchemas(c *fiber.Ctx) error {
 		result = append(result, schema)
 	}
 
+	// the count answers the first question asked of an empty schema dropdown
+	a.l.Debug("served cddl schema list", "count", len(result))
 	return c.JSON(result)
 }
 
@@ -29,9 +32,11 @@ func (a *App) HandleGetCddlSchema(c *fiber.Ctx) error {
 
 	schema, err := a.nui.CddlRepo.GetById(id)
 	if err != nil {
+		a.l.Warn("cannot serve cddl schema", "id", id, "error", err)
 		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	a.l.Debug("served cddl schema", "id", schema.ID, "name", schema.Name)
 	return c.JSON(schema)
 }
 
@@ -44,9 +49,11 @@ func (a *App) HandleServeCddlContent(c *fiber.Ctx) error {
 
 	schema, err := a.nui.CddlRepo.GetById(id)
 	if err != nil {
+		a.l.Warn("cannot serve cddl schema content", "id", id, "error", err)
 		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	a.l.Debug("served cddl schema content", "id", schema.ID, "bytes", len(schema.Content))
 	c.Set("Content-Type", "text/plain; charset=utf-8")
 	c.Set("Content-Disposition", "attachment; filename=\""+schema.Name+"\"")
 	return c.SendString(schema.Content)

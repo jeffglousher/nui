@@ -1,14 +1,26 @@
-import { FunctionComponent } from "react"
+import { FunctionComponent, useMemo, useState } from "react"
 import { Editor } from "@monaco-editor/react"
-import { CborDecodedData } from "@/types/Cbor"
+import { CborDecodedData, CddlSchema } from "@/types/Cbor"
+import { toCborNotation } from "@/utils/cbor"
+import { deriveShape } from "@/utils/cbor/shape"
 import TextCmp from "../text/TextCmp"
 import { styles } from "./cbor.styles"
+import CborStructured from "./CborStructured"
 
 interface CborDataDisplayProps {
   decodedData: CborDecodedData | null
   binaryData?: string
   selectedSchemaId: string
   selectedRule: string
+  schema?: CddlSchema
+}
+
+type View = "fields" | "json" | "notation"
+
+const VIEW_TITLES: Record<View, string> = {
+  fields: "the payload under the names its rule gives it",
+  json: "the payload as JSON",
+  notation: "the payload as CBOR diagnostic notation",
 }
 
 const CborDataDisplay: FunctionComponent<CborDataDisplayProps> = ({
@@ -16,23 +28,60 @@ const CborDataDisplay: FunctionComponent<CborDataDisplayProps> = ({
   binaryData,
   selectedSchemaId,
   selectedRule,
+  schema,
 }) => {
+  const [view, setView] = useState<View>("fields")
+
+  // a payload the rule rejects has nothing to say through the fields of that rule
+  const field = useMemo(
+    () => decodedData?.valid && schema?.content && selectedRule
+      ? deriveShape(schema.content, selectedRule).field
+      : undefined,
+    [decodedData?.valid, schema?.content, selectedRule],
+  )
+
+  const notation = useMemo(
+    () => view == "notation" ? toCborNotation(binaryData) : "",
+    [view, binaryData],
+  )
+
   if (decodedData?.dataJson) {
+    const showing = field ? view : "json"
     return (
       <div style={styles.dataDisplay}>
-        <Editor
-          height="100%"
-          language="json"
-          value={decodedData.dataJson}
-          theme="vs-dark"
-          options={{
-            readOnly: true,
-            formatOnType: true,
-            formatOnPaste: true,
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-          }}
-        />
+        {field && (
+          <div style={styles.viewSwitch}>
+            <div style={styles.segmented}>
+              {(["fields", "json", "notation"] as View[]).map(candidate => (
+                <button key={candidate}
+                  style={{ ...styles.segment, ...(candidate == showing ? styles.segmentOn : {}) }}
+                  title={VIEW_TITLES[candidate]}
+                  onClick={() => setView(candidate)}
+                >
+                  {candidate == "notation" ? "Text" : candidate == "json" ? "JSON" : "Fields"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {showing == "fields" && <CborStructured field={field} payload={binaryData} />}
+
+        {showing != "fields" && (
+          <Editor
+            height="100%"
+            language={showing == "json" ? "json" : "plaintext"}
+            value={showing == "json" ? decodedData.dataJson : notation}
+            theme="vs-dark"
+            options={{
+              readOnly: true,
+              formatOnType: true,
+              formatOnPaste: true,
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+            }}
+          />
+        )}
       </div>
     )
   }

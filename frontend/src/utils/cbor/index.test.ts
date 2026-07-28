@@ -116,6 +116,16 @@ describe('decodeCborPayload', () => {
       expect(JSON.parse(result.dataJson)).toEqual({ tag: 999, value: 'payload' })
     })
 
+    test('should keep the tag number of a tagged byte string', () => {
+      // a tag around bytes is how a UUID travels, and the bytes are their own
+      // container: reading the tag off them must not hand them back tagged
+      const result = decodeCborPayload(payloadOf(`37(h'000102030405060708090a0b0c0d0e0f')`))
+
+      expect(result.success).toBe(true)
+      expect(JSON.parse(result.dataJson))
+        .toEqual({ tag: 37, value: `h'000102030405060708090a0b0c0d0e0f'` })
+    })
+
     test('should keep the pairs of a map whose keys are not text', () => {
       const result = decodeCborPayload(payloadOf('{1: "x", 2: "y"}'))
 
@@ -144,8 +154,22 @@ describe('compileCddl', () => {
 })
 
 describe('getRulesFromSchema', () => {
-  test('should list the rules in source order', () => {
+  test('should list the rules in source order when there is one', () => {
     expect(getRulesFromSchema(personSchema)).toEqual(['person'])
+  })
+
+  test('should put the file stem first so picking a schema lands on the message type', () => {
+    const schema = {
+      id: 'order',
+      name: 'order.cddl',
+      content: `
+        line = { sku: tstr }
+        amount = { cents: uint }
+        order = { lines: [+ line], total: amount }
+        uuid = bstr
+      `,
+    }
+    expect(getRulesFromSchema(schema)[0]).toBe('order')
   })
 
   test('should leave out generic rules, which cannot be validated against', () => {

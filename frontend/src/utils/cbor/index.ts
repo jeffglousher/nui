@@ -63,8 +63,16 @@ export function bytesToBinaryString(bytes: Uint8Array): string {
  */
 export function toJsonSafe(value: unknown): unknown {
   const tag = CBOR.Tag.get(value)
-  if (tag != null) return { tag: Number(tag), value: toJsonSafe(CBOR.Tag.getValue(value)) }
+  if (tag != null) {
+    // bytes and arrays carry their tag on themselves, so what is inside a tag
+    // can be the tagged value again: read on without asking about the tag twice
+    const inner = CBOR.Tag.getValue(value)
+    return { tag: Number(tag), value: inner === value ? untagged(value) : toJsonSafe(inner) }
+  }
+  return untagged(value)
+}
 
+function untagged(value: unknown): unknown {
   if (value === undefined) return null
   if (typeof value === 'bigint') return value.toString()
   if (typeof value === 'number' && !Number.isFinite(value)) return String(value)
@@ -188,7 +196,28 @@ export function encodeCborPayload(
   return { success: true, payload }
 }
 
+/**
+ * Write a stored CBOR payload back as the diagnostic notation that produced it.
+ * Editing a payload means editing its text form, so a payload read from a
+ * message or a KV entry has to make the trip back before it can be changed.
+ */
+export function toCborNotation(binaryData: string): string {
+  if (!binaryData) return ''
+  try {
+    return CBOR.decompile(binaryStringToBytes(binaryData), { indent: 2 })
+  } catch {
+    // not CBOR at all: leave the payload to the notation editor to complain about
+    return binaryData
+  }
+}
+
 /** The rules of a schema that can be selected as a validation target */
+/**
+ * Named rules a payload can be checked against.
+ *
+ * The file stem comes first when it is one of them (`order.cddl` → `order`), so
+ * picking a schema lands on the message type instead of a helper like `uuid`.
+ */
 export function getRulesFromSchema(schema: CddlSchema): string[] {
   if (!schema?.content) return []
   const { compiled } = compileCddl(schema.content)
@@ -201,7 +230,19 @@ export function getRulesFromSchema(schema: CddlSchema): string[] {
     if (definitions.some(definition => !!definition.generics?.length)) continue
     rules.push(name)
   }
-  return rules
+
+  const stem = schemaStem(schema)
+  return rules.sort((a, b) => {
+    if (a == stem) return -1
+    if (b == stem) return 1
+    return a.localeCompare(b)
+  })
+}
+
+/** The name of the schema file without its path or `.cddl` suffix */
+function schemaStem(schema: CddlSchema): string {
+  const file = (schema.name || schema.id || "").replace(/\\/g, "/").split("/").pop() ?? ""
+  return file.replace(/\.cddl$/i, "")
 }
 
 /** Compile a schema and hand it back carrying the failure, if any */
