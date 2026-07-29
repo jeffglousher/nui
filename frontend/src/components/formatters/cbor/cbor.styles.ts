@@ -138,7 +138,7 @@ export const styles = {
 
   validBadge: {
     fontSize: "11px",
-    color: "#6bcb77",
+    color: "#6AFFAB",
     marginLeft: "8px",
   } as CSSProperties,
 
@@ -193,12 +193,12 @@ export const styles = {
 
   statusReady: {
     fontSize: "11px",
-    color: "#6bcb77",
+    color: "#6AFFAB",
   } as CSSProperties,
 
   statusWrong: {
     fontSize: "11px",
-    color: "#ff9b9b",
+    color: "#ff6b6b",
   } as CSSProperties,
 
   viewSwitch: {
@@ -257,7 +257,7 @@ export const styles = {
     fontSize: "11px",
     lineHeight: "14px",
     minHeight: "14px",
-    color: "#ff9b9b",
+    color: "#ff6b6b",
   } as CSSProperties,
 
   input: {
