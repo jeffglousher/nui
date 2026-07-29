@@ -3,11 +3,11 @@
  * from JetStream, so the CBOR the send card writes is the CBOR the message
  * list reads.
  *
- * Skipped unless NUI_E2E is set, since it needs a NATS server with JetStream
- * on :4222, NUI on :31311, and a person.cddl in the schemas directory:
+ * Skipped unless NUI_E2E is set. Needs JetStream on :4222, NUI on :31311,
+ * and person.cddl in the schemas directory:
  *
  *   nats-server -js
- *   go run ./cmd/server --cddl-schemas-path=./cddlschemas/default
+ *   go run ./cmd/server --cddl-schemas-path=./tests/cddlschemas/default
  *   cd frontend && NUI_E2E=1 npx vitest run src/utils/cbor/e2e.test.ts
  */
 

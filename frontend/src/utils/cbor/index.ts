@@ -211,12 +211,9 @@ export function toCborNotation(binaryData: string): string {
   }
 }
 
-/** The rules of a schema that can be selected as a validation target */
 /**
- * Named rules a payload can be checked against.
- *
- * The file stem comes first when it is one of them (`order.cddl` → `order`), so
- * picking a schema lands on the message type instead of a helper like `uuid`.
+ * Named CDDL rules available as the payload type.
+ * File stem first when present (`order.cddl` → `order` before helpers like `uuid`).
  */
 export function getRulesFromSchema(schema: CddlSchema): string[] {
   if (!schema?.content) return []

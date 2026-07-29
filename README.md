@@ -49,7 +49,7 @@ Easily manage your NATS core, streams and buckets, both from Desktop App or Web 
 
 # Documentation
 - **[Protobuf Message Decoding Guide](PROTOBUF_USAGE.md)** - How to decode protobuf messages with your own schemas
-- **[CBOR + CDDL Message Guide](CDDL_USAGE.md)** - How to read CBOR messages, and write them as the fields of your CDDL schemas
+- **[CBOR + CDDL Message Guide](CDDL_USAGE.md)** — Read and send CBOR with optional CDDL schemas (same idea as protobuf)
 
 # Build and run Locally
 The projects uses Go and Wails.io as to run the BE and React on Vite on FE.

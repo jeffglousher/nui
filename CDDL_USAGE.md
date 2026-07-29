@@ -13,7 +13,7 @@ Read and write CBOR in NATS UI, optionally checked against your CDDL schemas.
 
    **Docker / server:** `/cddlschemas/default` (or `--cddl-schemas-path=...`)
 
-2. **Add `.cddl` files** (examples live in [`tests/cddlschemas/default`](tests/cddlschemas/default)):
+2. **Add `.cddl` files** (UI demos: `person.cddl`, `order.cddl` in [`tests/cddlschemas/default`](tests/cddlschemas/default); `simple` / `simple2` are API test fixtures):
 
 ```
 default/

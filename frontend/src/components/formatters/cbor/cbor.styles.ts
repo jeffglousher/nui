@@ -23,17 +23,6 @@ export const styles = {
     color: "#dedede",
   } as CSSProperties,
 
-  changeButton: {
-    marginLeft: "8px",
-    padding: "3px 8px",
-    fontSize: "11px",
-    color: "#dedede",
-    backgroundColor: "#393939",
-    border: "1px solid #4a4a4a",
-    borderRadius: "3px",
-    cursor: "pointer",
-  } as CSSProperties,
-
   controls: {
     padding: "8px 12px",
     borderBottom: "1px solid #333",
@@ -142,7 +131,7 @@ export const styles = {
     marginLeft: "8px",
   } as CSSProperties,
 
-  //#region the fields a CDDL rule is rendered as
+  //#region form fields
 
   form: {
     flex: 1,
@@ -225,12 +214,6 @@ export const styles = {
     flexDirection: "column",
     gap: "2px",
     padding: "3px 0",
-  } as CSSProperties,
-
-  fieldHead: {
-    display: "flex",
-    alignItems: "baseline",
-    gap: "6px",
   } as CSSProperties,
 
   fieldLabel: {

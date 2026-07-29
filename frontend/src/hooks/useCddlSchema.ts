@@ -90,7 +90,7 @@ export function useCddlSchema(binaryData?: string, subject?: string): UseCddlSch
     } finally {
       setIsAutoDetecting(false)
     }
-    }, [binaryData, schemas, subject])
+  }, [binaryData, schemas, subject])
 
   const resetSelection = useCallback(() => {
     setSelectedSchemaId("")

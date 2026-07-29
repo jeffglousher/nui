@@ -12,12 +12,12 @@ interface SchemaSelectorProps {
   onSchemaChange: (schemaId: string) => void
   onRuleChange: (rule: string) => void
   onRefreshSchemas: () => void
-  onAutoDetect: () => void
+  onAutoDetect?: () => void
   onDone?: () => void
   showDoneButton?: boolean
-  /** unset where there is no payload to detect a rule from, as when writing one */
+  /** hide when writing a payload (nothing to detect from yet) */
   showAutoDetect?: boolean
-  /** both choices on one line, without the words that repeat what the lists say */
+  /** schema + type on one line */
   compact?: boolean
 }
 
@@ -43,7 +43,7 @@ const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
         <div style={styles.statusMessage}>
           {isLoadingSchemas
             ? "Loading CDDL schemas..."
-            : "Auto-detecting best CDDL file + rule combination..."}
+            : "Auto-detecting best CDDL file + type..."}
         </div>
       )}
 
@@ -87,7 +87,7 @@ const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
             value={selectedRule}
             onChange={(e) => onRuleChange(e.target.value)}
             style={styles.select}
-            title="the CDDL rule the payload is written as (helpers like uuid stay available)"
+            title="Message type (file name is preferred; helpers like uuid stay available)"
           >
             <option value="">Select type...</option>
             {availableRules.map((rule) => (
@@ -96,7 +96,7 @@ const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
               </option>
             ))}
           </select>
-          {showAutoDetect && (
+          {showAutoDetect && onAutoDetect && (
             <button onClick={onAutoDetect} disabled={isAutoDetecting} style={styles.buttonSmall}>
               {isAutoDetecting ? "Detecting..." : "Auto-detect"}
             </button>

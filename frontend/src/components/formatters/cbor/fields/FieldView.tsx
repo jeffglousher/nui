@@ -18,15 +18,7 @@ export interface FieldViewProps {
   onRemove?: () => void
 }
 
-/**
- * A field of a CDDL rule, as the control that fills it.
- *
- * Only what the schema asks for is on show: the members it requires, and the
- * one alternative a choice is on. Everything else - the members it merely
- * allows, further items of a repeated member - is added from a chip under the
- * field it belongs to, so a rule with thirty optional members opens as the two
- * it needs.
- */
+/** One CDDL field control; required members first, optionals via chips. */
 const FieldView: FunctionComponent<FieldViewProps> = props => {
   const { field, value, onChange, errors, readOnly, label, hint, occur, onRemove } = props
   const error = errors?.[field.path]

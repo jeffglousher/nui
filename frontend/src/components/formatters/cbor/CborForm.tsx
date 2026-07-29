@@ -16,19 +16,7 @@ interface Props {
   onChange?: (text: string) => void
 }
 
-/**
- * Writing a CBOR payload through the rule it has to match.
- *
- * With a CDDL rule chosen the payload is written as the fields of that rule,
- * which is the only place the names, the types and the bounds of a message are
- * written down. Without one - an ad-hoc payload, or a rule too open to render -
- * it is written as CBOR text, which is what the fields produce anyway: the card
- * carries that text either way, so the two can be swapped freely.
- *
- * A form nobody has filled in yet is not a form full of mistakes. What is still
- * empty is counted quietly at the foot of the card; only a field holding
- * something its schema will not take is called out where it sits.
- */
+/** Send editor: CDDL fields when a type is selected, otherwise diagnostic notation. */
 const CborForm: FunctionComponent<Props> = ({ text, subject, style, onChange }) => {
   const {
     schemas,
@@ -102,7 +90,7 @@ const CborForm: FunctionComponent<Props> = ({ text, subject, style, onChange }) 
       <div style={styles.schemaHeader}>
         {hasSelection && !choosing ? (
           <button style={styles.headerButton}
-            title="use another schema or rule"
+            title="Use another schema or type"
             onClick={() => setShowSchemaControls(true)}
           >
             {selectedSchema?.name} <span style={{ opacity: 0.5 }}>{"\u203a"}</span> {selectedRule} {"\u2304"}
@@ -114,13 +102,13 @@ const CborForm: FunctionComponent<Props> = ({ text, subject, style, onChange }) 
         {field && (
           <div style={styles.segmented}>
             <button style={{ ...styles.segment, ...(asText ? {} : styles.segmentOn) }}
-              title="fill in the fields of the CDDL rule"
+              title="Fill in the fields of the selected type"
               onClick={() => handleSwap(false)}
             >
               Fields
             </button>
             <button style={{ ...styles.segment, ...(asText ? styles.segmentOn : {}) }}
-              title="write the payload out: CBOR diagnostic notation, of which JSON is a subset"
+              title="Edit as CBOR diagnostic notation (JSON works too)"
               onClick={() => handleSwap(true)}
             >
               Text
@@ -143,7 +131,6 @@ const CborForm: FunctionComponent<Props> = ({ text, subject, style, onChange }) 
             if (rule) setShowSchemaControls(false)
           }}
           onRefreshSchemas={refreshSchemas}
-          onAutoDetect={() => setShowSchemaControls(false)}
           showAutoDetect={false}
           compact
         />
@@ -194,9 +181,6 @@ const CborForm: FunctionComponent<Props> = ({ text, subject, style, onChange }) 
     const invalid = check.errors.filter(error => error.kind == "invalid")
     if (invalid.length > 0) return <span style={styles.statusWrong}>{invalid[0].message}</span>
 
-    // naming what the payload is waiting on beats counting it: a rule where an
-    // empty string is a fine answer would otherwise count fewer fields than the
-    // reader can see sitting empty
     const missing = check.errors.map(error => nameOf(error.path))
     if (missing.length > 0) {
       return <span style={styles.statusQuiet}>{`waiting for ${listOf(missing)}`}</span>
@@ -209,17 +193,12 @@ const CborForm: FunctionComponent<Props> = ({ text, subject, style, onChange }) 
 
 export default CborForm
 
-/** The name a field goes by, out of the path it sits at */
 function nameOf(path: string): string {
   const last = path.split(".").pop()
   return !last || last == "$" ? "a value" : last
 }
 
-/**
- * The fields still to fill in, said as a person would say them.
- *
- * Two get named; past that the names stop helping and a count does the rest.
- */
+/** "a", "a and b", or "a, b and N more" */
 function listOf(names: string[]): string {
   const said = [...new Set(names)]
   if (said.length == 1) return said[0]

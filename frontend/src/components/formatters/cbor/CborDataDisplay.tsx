@@ -18,9 +18,9 @@ interface CborDataDisplayProps {
 type View = "fields" | "json" | "notation"
 
 const VIEW_TITLES: Record<View, string> = {
-  fields: "the payload under the names its rule gives it",
-  json: "the payload as JSON",
-  notation: "the payload as CBOR diagnostic notation",
+  fields: "Payload under the names from the selected type",
+  json: "Payload as JSON",
+  notation: "Payload as CBOR diagnostic notation",
 }
 
 const CborDataDisplay: FunctionComponent<CborDataDisplayProps> = ({
@@ -32,7 +32,7 @@ const CborDataDisplay: FunctionComponent<CborDataDisplayProps> = ({
 }) => {
   const [view, setView] = useState<View>("fields")
 
-  // a payload the rule rejects has nothing to say through the fields of that rule
+  // fields view only when the payload matches the selected type
   const field = useMemo(
     () => decodedData?.valid && schema?.content && selectedRule
       ? deriveShape(schema.content, selectedRule).field

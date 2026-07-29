@@ -9,12 +9,6 @@ interface CompactSchemaHeaderProps {
   onChangeClick: () => void
 }
 
-/**
- * The rule a payload is being read through, in the one line it takes to say it.
- *
- * The same line, and the same words, as the card that writes a payload: reading
- * and writing are the same rule seen from two sides.
- */
 const CompactSchemaHeader: FunctionComponent<CompactSchemaHeaderProps> = ({
   schema,
   rule,
@@ -24,7 +18,7 @@ const CompactSchemaHeader: FunctionComponent<CompactSchemaHeaderProps> = ({
   return (
     <div style={styles.schemaHeader}>
       <button style={styles.headerButton}
-        title="read this payload through another schema or rule"
+        title="Read this payload through another schema or type"
         onClick={onChangeClick}
       >
         {schema.name} <span style={{ opacity: 0.5 }}>{"\u203a"}</span> {rule} {"\u2304"}

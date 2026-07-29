@@ -17,14 +17,7 @@ interface Props {
   onRemove?: () => void
 }
 
-/**
- * One field of the form: its name, its input, and everything else on request.
- *
- * A schema says far more about a member than a form has room for, so the type,
- * the tags and the constraints wait behind a disclosure that only darkens under
- * the pointer, and the comment from the schema appears while the field is being
- * filled in. What is left is a label and an input.
- */
+/** Label + input; schema details stay behind a hover disclosure. */
 const FieldShell: FunctionComponent<Props> = ({
   field,
   label,

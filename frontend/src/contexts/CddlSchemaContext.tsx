@@ -34,8 +34,6 @@ export function CddlSchemaProvider({ children }: CddlSchemaProviderProps) {
       const prepared = backendSchemas.map((schema) => prepareCddlSchema(schema))
       setSchemas(prepared)
 
-      // an empty dropdown and a schema that will not compile look the same from
-      // the card, so the log is where the difference gets recorded
       const broken = prepared.filter(schema => schema.error)
       logSo.add({
         type: prepared.length == 0 ? MESSAGE_TYPE.WARNING : MESSAGE_TYPE.INFO,
