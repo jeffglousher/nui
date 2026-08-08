@@ -31,11 +31,23 @@ vi.mock('@/stores/log', () => ({
   default: { add: (entry: { type?: string, body: string }) => { logged.push(entry) } },
 }))
 
+/** The log is written after the render that decided on it, so let that happen */
+const said = () => new Promise<typeof logged>(resolve => queueMicrotask(() => resolve(logged)))
+
 const PERSON = { id: 'person', name: 'person.cddl', content: 'person = { name: tstr, age: uint }' }
 const PRODUCT = { id: 'product', name: 'product.cddl', content: 'product = { sku: tstr, price: int }' }
 
 function payloadOf(cdn: string): string {
   return bytesToBinaryString(CBOR.compile(cdn))
+}
+
+/** Schemas that match nothing, to push the probe up against its bound */
+function filler(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `s${index}`,
+    name: `s${index}.cddl`,
+    content: `s${index} = { only: "${index}" }`,
+  }))
 }
 
 const person = payloadOf('{"name": "ada", "age": 36}')
@@ -62,42 +74,33 @@ describe('probing', () => {
     expect(probeSchemas(person, [broken, PERSON])).toMatchObject({ rule: 'person' })
   })
 
-  test('should say so when nothing matches rather than pass over it', () => {
+  test('should say so when nothing matches rather than pass over it', async () => {
     expect(probeSchemas(payloadOf('[1, 2, 3]'), [PERSON, PRODUCT], 'odd.subject')).toBeUndefined()
-    expect(logged.map(entry => entry.body)).toContain('no schema matches odd.subject')
+
+    expect((await said()).map(entry => entry.body)).toContain('no schema matches odd.subject')
   })
 
-  test('should say the same thing only once for a subject', () => {
+  test('should say the same thing only once for a subject', async () => {
     probeSchemas(payloadOf('[1]'), [PERSON], 'noisy.subject')
     probeSchemas(payloadOf('[2]'), [PERSON], 'noisy.subject')
 
-    expect(logged.filter(entry => entry.body.startsWith('no schema matches'))).toHaveLength(1)
+    expect((await said()).filter(entry => entry.body.startsWith('no schema matches'))).toHaveLength(1)
   })
 
-  test('should warn when the bound leaves schemas untried', () => {
-    const many = Array.from({ length: MAX_SCHEMAS_TO_PROBE + 3 }, (_, index) => ({
-      id: `s${index}`,
-      name: `s${index}.cddl`,
-      content: `s${index} = { only: "${index}" }`,
-    }))
+  test('should warn when the bound leaves schemas untried', async () => {
+    const many = filler(MAX_SCHEMAS_TO_PROBE + 3)
 
     expect(probeSchemas(person, many)).toBeUndefined()
 
-    const warning = logged.find(entry => entry.type == 'warn')
-    expect(warning?.body).toBe(
+    expect((await said()).find(entry => entry.type == 'warn')?.body).toBe(
       `no match in the first ${MAX_SCHEMAS_TO_PROBE} of ${many.length} schemas, and the rest were not tried`,
     )
   })
 
-  test('should not warn about the bound when a match is found within it', () => {
-    const many = Array.from({ length: MAX_SCHEMAS_TO_PROBE + 3 }, (_, index) => ({
-      id: `s${index}`,
-      name: `s${index}.cddl`,
-      content: `s${index} = { only: "${index}" }`,
-    }))
+  test('should not warn about the bound when a match is found within it', async () => {
+    expect(probeSchemas(person, [PERSON, ...filler(MAX_SCHEMAS_TO_PROBE + 3)])).toMatchObject({ rule: 'person' })
 
-    expect(probeSchemas(person, [PERSON, ...many])).toMatchObject({ rule: 'person' })
-    expect(logged.filter(entry => entry.type == 'warn')).toHaveLength(0)
+    expect((await said()).filter(entry => entry.type == 'warn')).toHaveLength(0)
   })
 })
 

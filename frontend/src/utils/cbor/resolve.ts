@@ -108,14 +108,16 @@ export function resolveCbor(binaryData: string, schemas: CddlSchema[], subject?:
 
 function work(binaryData: string, schemas: CddlSchema[], subject?: string): CborResolution {
   const remembered = recall(binaryData, schemas, subject)
-  const found = remembered?.holds ?? probeSchemas(binaryData, schemas, subject)
+  const found = remembered?.holds
+    ? remembered.mapping
+    : probeSchemas(binaryData, schemas, subject)
 
   return {
     schema: found?.schema,
     rule: found?.rule,
     decoded: decodeAndValidateCbor(binaryData, found?.schema, found?.rule),
-    fromCache: !!remembered?.holds,
-    cacheStale: !!remembered && !remembered.holds,
+    fromCache: remembered?.holds ?? false,
+    cacheStale: remembered ? !remembered.holds : false,
     unmatched: !found,
   }
 }
@@ -132,10 +134,11 @@ function recall(
   binaryData: string,
   schemas: CddlSchema[],
   subject?: string,
-): { holds?: { schema: CddlSchema, rule: string } } | undefined {
+): { mapping: { schema: CddlSchema, rule: string }, holds: boolean } | undefined {
   const mapping = rememberedFor(subject, schemas)
   if (!mapping) return undefined
-  return validateCborPayload(binaryData, mapping.schema, mapping.rule).valid ? { holds: mapping } : {}
+
+  return { mapping, holds: validateCborPayload(binaryData, mapping.schema, mapping.rule).valid }
 }
 
 /**
@@ -186,6 +189,9 @@ export function probeSchemas(
     }
   }
 
+  // nothing to probe against is already said, once, by whoever read the
+  // directory: either no .cddl files were found or each one that will not
+  // compile was named
   if (probed.length == 0) return undefined
 
   if (usable.length > probed.length) {
@@ -201,11 +207,17 @@ export function probeSchemas(
   return undefined
 }
 
-/** Say a thing once: the same payload arrives over and over on a live subject */
+/**
+ * Say a thing once: the same payload arrives over and over on a live subject.
+ *
+ * A row works its payload out while it renders, and writing to the log store
+ * from there would be changing one component while another is drawing. What is
+ * said is settled now and said as soon as the render is over.
+ */
 function report(key: string, type: MESSAGE_TYPE, body: string, data?: string): void {
   if (reported.has(key)) return
   reported.add(key)
-  logSo.add({ type, title: 'CDDL', body, data })
+  queueMicrotask(() => logSo.add({ type, title: 'CDDL', body, data }))
 }
 
 /** Forget every kept answer: for tests, and for a schemas directory reread */
