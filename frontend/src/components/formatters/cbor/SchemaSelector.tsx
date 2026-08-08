@@ -75,7 +75,7 @@ const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
           </>
         ) : (
           <span style={styles.noSchemasMessage}>
-            No schemas found. Place .cddl files in the cddl-schemas directory.
+            No schemas found. Place .cddl files in cddlschemas/default.
           </span>
         )}
       </div>

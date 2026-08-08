@@ -380,9 +380,13 @@ function readNumber(field: Extract<CborField, { kind: 'number' }>, value: CborVa
     } catch {
       return fail(errors, field.path, 'a whole number is needed here')
     }
+    // compare on bigint when the value cannot be represented exactly as a number
+    if (field.big || !isSafe(asBig)) {
+      if (outOfBoundsBigInt(asBig, field)) return fail(errors, field.path, boundsMessage(field))
+      return asBig
+    }
     if (outOfBounds(Number(asBig), field)) return fail(errors, field.path, boundsMessage(field))
-    // a number too large to hold exactly stays a bigint, which CBOR writes as one
-    return field.big || !isSafe(asBig) ? asBig : Number(asBig)
+    return Number(asBig)
   }
 
   const asNumber = Number(text)
@@ -549,6 +553,12 @@ function unfilled(errors: CborValueError[], path: string, message: string): unde
 
 function outOfBounds(value: number, field: Extract<CborField, { kind: 'number' }>): boolean {
   return (field.min != null && value < field.min) || (field.max != null && value > field.max)
+}
+
+function outOfBoundsBigInt(value: bigint, field: Extract<CborField, { kind: 'number' }>): boolean {
+  const min = field.min != null ? BigInt(field.min) : null
+  const max = field.max != null ? BigInt(field.max) : null
+  return (min != null && value < min) || (max != null && value > max)
 }
 
 function boundsMessage(field: Extract<CborField, { kind: 'number' }>): string {

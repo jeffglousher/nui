@@ -89,7 +89,7 @@ const CborDataDisplay: FunctionComponent<CborDataDisplayProps> = ({
   if (!decodedData?.error && selectedSchemaId && selectedRule) {
     return (
       <div style={styles.placeholder}>
-        Ready to decode with {selectedSchemaId}::{selectedRule}
+        Ready to decode with {selectedSchemaId} › {selectedRule}
       </div>
     )
   }
@@ -97,7 +97,7 @@ const CborDataDisplay: FunctionComponent<CborDataDisplayProps> = ({
   return (
     <div style={styles.fallbackContainer}>
       <div style={styles.placeholder}>
-        CBOR format: place .cddl files in the cddl-schemas directory for schema validation.
+        CBOR format: place .cddl files in cddlschemas/default for schema validation.
         <br />
         Raw CBOR decode works without a schema when the payload is valid CBOR.
       </div>

@@ -144,6 +144,19 @@ describe('toJsValue', () => {
       .toBe(18446744073709551615n)
   })
 
+  test('should enforce bounds on integers too large for Number', () => {
+    const field: CborField = {
+      kind: 'number',
+      path: '$',
+      type: 'int',
+      integer: true,
+      max: 9007199254740996,
+    }
+    expect(toJsValue(field, { kind: 'scalar', text: '9007199254740997' }).errors).toEqual([
+      { path: '$', message: '9007199254740996 or less', kind: 'invalid' },
+    ])
+  })
+
   test('should read bytes written as hex, text, or base64', () => {
     const field = fieldOf('a = bstr', 'a')
 
