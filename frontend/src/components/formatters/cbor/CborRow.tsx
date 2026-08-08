@@ -1,5 +1,6 @@
 import { FunctionComponent, useMemo, memo } from "react"
-import { useCddlSchema } from "@/hooks/useCddlSchema"
+import { useCddlSchemas } from "@/contexts/CddlSchemaContext"
+import { resolveCbor } from "@/utils/cbor/resolve"
 import JsonRow from "../json/JsonRow"
 import TextRow from "../text/TextRow"
 
@@ -9,43 +10,47 @@ interface Props {
   subject?: string
 }
 
+/**
+ * One CBOR payload in a message list.
+ *
+ * A list renders one of these per message, so the row holds no state and runs
+ * no effects: it asks for the answer to its payload, which is worked out once
+ * and shared with every other row asking the same, and draws it.
+ */
 const CborRow: FunctionComponent<Props> = ({ text, style, subject }) => {
-  const { selectedSchema, selectedRule, decodedData } = useCddlSchema(text, subject)
+  const { schemas } = useCddlSchemas()
+
+  const resolution = useMemo(
+    () => text ? resolveCbor(text, schemas, subject) : undefined,
+    [text, schemas, subject],
+  )
 
   const schemaInfo = useMemo(() => {
-    if (!selectedSchema || !selectedRule) return null
-    const schemaName =
-      selectedSchema.name.length > 30
-        ? `...${selectedSchema.name.slice(-27)}`
-        : selectedSchema.name
-    return `${schemaName}:${selectedRule}`
-  }, [selectedSchema, selectedRule])
+    if (!resolution?.schema || !resolution.rule) return null
+    const name = resolution.schema.name
+    const shown = name.length > 30 ? `...${name.slice(-27)}` : name
+    return `${shown}:${resolution.rule}`
+  }, [resolution])
 
-  if (!text) return null
+  if (!text || !resolution) return null
 
-  if (decodedData?.dataJson) {
-    const validationError = decodedData.validationErrors?.[0]
+  const { decoded } = resolution
+
+  if (decoded.dataJson) {
+    const validationError = decoded.validationErrors?.[0]
     return (
       <div style={style}>
         {schemaInfo && <div style={cssSchemaInfo}>{schemaInfo}</div>}
         {validationError && <TextRow text={`CDDL: ${validationError}`} error />}
-        <JsonRow text={decodedData.dataJson} />
-      </div>
-    )
-  }
-
-  if (decodedData?.error) {
-    return (
-      <div style={style}>
-        {schemaInfo && <div style={cssSchemaInfo}>{schemaInfo}</div>}
-        <TextRow text={decodedData.error} error />
+        <JsonRow text={decoded.dataJson} />
       </div>
     )
   }
 
   return (
     <div style={style}>
-      <TextRow text="CBOR: decoding..." />
+      {schemaInfo && <div style={cssSchemaInfo}>{schemaInfo}</div>}
+      <TextRow text={decoded.error ?? "CBOR: nothing to show"} error />
     </div>
   )
 }

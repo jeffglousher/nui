@@ -8,7 +8,6 @@ interface SchemaSelectorProps {
   selectedRule: string
   availableRules: string[]
   isLoadingSchemas: boolean
-  isAutoDetecting: boolean
   onSchemaChange: (schemaId: string) => void
   onRuleChange: (rule: string) => void
   onRefreshSchemas: () => void
@@ -27,7 +26,6 @@ const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
   selectedRule,
   availableRules,
   isLoadingSchemas,
-  isAutoDetecting,
   onSchemaChange,
   onRuleChange,
   onRefreshSchemas,
@@ -39,12 +37,8 @@ const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
 }) => {
   return (
     <div style={compact ? styles.controlsCompact : styles.controls}>
-      {(isAutoDetecting || isLoadingSchemas) && (
-        <div style={styles.statusMessage}>
-          {isLoadingSchemas
-            ? "Loading CDDL schemas..."
-            : "Auto-detecting best CDDL file + type..."}
-        </div>
+      {isLoadingSchemas && (
+        <div style={styles.statusMessage}>Loading CDDL schemas...</div>
       )}
 
       <div style={styles.controlGroup}>
@@ -97,8 +91,8 @@ const SchemaSelector: FunctionComponent<SchemaSelectorProps> = ({
             ))}
           </select>
           {showAutoDetect && onAutoDetect && (
-            <button onClick={onAutoDetect} disabled={isAutoDetecting} style={styles.buttonSmall}>
-              {isAutoDetecting ? "Detecting..." : "Auto-detect"}
+            <button onClick={onAutoDetect} style={styles.buttonSmall}>
+              Auto-detect
             </button>
           )}
           {showDoneButton && onDone && (

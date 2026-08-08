@@ -1,14 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { CborDecodedData, CddlSchema } from "@/types/Cbor"
-import { decodeAndValidateCbor, getRulesFromSchema, validateCborPayload } from "@/utils/cbor"
-import { CddlTopicCache } from "@/utils/cbor/CddlTopicCache"
+import { decodeAndValidateCbor, getRulesFromSchema } from "@/utils/cbor"
+import { getTopicCache, probeSchemas, rememberedFor, resolveCbor } from "@/utils/cbor/resolve"
 import { useCddlSchemas } from "@/contexts/CddlSchemaContext"
-import logSo from "@/stores/log"
-import { MESSAGE_TYPE } from "@/stores/log/utils"
-
-const CACHE_CONFIDENCE_THRESHOLD = 0.5
-const MAX_SCHEMAS_TO_PROBE = 5
-
 
 interface UseCddlSchemaReturn {
   schemas: CddlSchema[]
@@ -16,7 +10,6 @@ interface UseCddlSchemaReturn {
   selectedRule: string
   decodedData: CborDecodedData | null
   isLoadingSchemas: boolean
-  isAutoDetecting: boolean
   showSchemaControls: boolean
   availableRules: string[]
   selectedSchema: CddlSchema | undefined
@@ -24,36 +17,28 @@ interface UseCddlSchemaReturn {
   setSelectedRule: (rule: string) => void
   setShowSchemaControls: (show: boolean) => void
   refreshSchemas: () => Promise<void>
-  autoDetectRule: () => Promise<void>
+  autoDetectRule: () => void
   resetSelection: () => void
 }
 
-let topicCache: CddlTopicCache | null = null
-
-function getTopicCache(): CddlTopicCache {
-  if (!topicCache) {
-    topicCache = new CddlTopicCache()
-  }
-  return topicCache
+function idOf(schema: CddlSchema): string {
+  return schema.id || schema.name
 }
 
 /**
- * A successful match belongs in the system log. Misses do not: most payloads
- * are not CBOR-with-CDDL, and warning on every one of them fills the card.
+ * The schema and rule a card reads or writes a payload under.
+ *
+ * This is the card's hook: it holds a selection a person can change, and it is
+ * the one place a subject is learned from. Rows of a message list do not use
+ * it — they ask `resolveCbor` for the answer and render it.
  */
-function detected(body: string, subject?: string) {
-  logSo.add({ type: MESSAGE_TYPE.INFO, title: "CDDL", body, data: subject })
-}
-
 export function useCddlSchema(binaryData?: string, subject?: string): UseCddlSchemaReturn {
   const { schemas, isLoading: isLoadingSchemas, refreshSchemas } = useCddlSchemas()
 
   const [selectedSchemaId, setSelectedSchemaId] = useState("")
   const [selectedRule, setSelectedRule] = useState("")
-  const [decodedData, setDecodedData] = useState<CborDecodedData | null>(null)
-  const [isAutoDetecting, setIsAutoDetecting] = useState(false)
   const [showSchemaControls, setShowSchemaControls] = useState(false)
-  const [isFromCache, setIsFromCache] = useState(false)
+  const [fromCache, setFromCache] = useState(false)
   /** the selection was made in the UI, so nothing else may take it back */
   const [isChosen, setIsChosen] = useState(false)
 
@@ -67,51 +52,39 @@ export function useCddlSchema(binaryData?: string, subject?: string): UseCddlSch
     [selectedSchema],
   )
 
-  const autoDetectRule = useCallback(async () => {
-    if (!binaryData || schemas.length === 0) return
+  const choose = useCallback((schema: CddlSchema | undefined, rule: string, cached: boolean) => {
+    setSelectedSchemaId(schema ? idOf(schema) : "")
+    setSelectedRule(rule)
+    setFromCache(cached)
+  }, [])
 
-    setIsAutoDetecting(true)
-    try {
-      // every CBOR payload decodes, so only the CDDL verdict tells the rules
-      // apart: the first rule the payload matches wins
-      for (const schema of schemas.slice(0, MAX_SCHEMAS_TO_PROBE)) {
-        if (schema.error) continue
-        const match = getRulesFromSchema(schema)
-          .find(rule => validateCborPayload(binaryData, schema, rule).valid)
-        if (match) {
-          setSelectedSchemaId(schema.id || schema.name)
-          setSelectedRule(match)
-          detected(`${schema.name} \u203a ${match} matches this payload`, subject)
-          return
-        }
-      }
-      // nothing matched: leave the selection empty so the payload is shown as
-      // plain CBOR instead of flagged against a schema it was never meant for
-    } finally {
-      setIsAutoDetecting(false)
-    }
-  }, [binaryData, schemas, subject])
+  const autoDetectRule = useCallback(() => {
+    if (!binaryData || schemas.length == 0) return
+    // asking again means ignoring what the subject carried before, which is
+    // the only reason there is to ask
+    const found = probeSchemas(binaryData, schemas, subject)
+    if (!found) return
+    setIsChosen(true)
+    choose(found.schema, found.rule, false)
+  }, [binaryData, schemas, subject, choose])
 
   const resetSelection = useCallback(() => {
-    setSelectedSchemaId("")
-    setSelectedRule("")
+    choose(undefined, "", false)
     setShowSchemaControls(false)
-    setDecodedData(null)
     setIsChosen(false)
-  }, [])
+  }, [choose])
 
   const chooseSchema = useCallback((id: string) => {
     setIsChosen(true)
-    setSelectedSchemaId(id)
     // the stem of the file is the message type people mean when they pick it
     const schema = schemas.find(s => s.id === id || s.name === id)
-    const preferred = schema ? getRulesFromSchema(schema)[0] : ""
-    setSelectedRule(preferred ?? "")
-  }, [schemas])
+    choose(schema, schema ? getRulesFromSchema(schema)[0] ?? "" : "", false)
+  }, [schemas, choose])
 
   const chooseRule = useCallback((rule: string) => {
     setIsChosen(true)
     setSelectedRule(rule)
+    setFromCache(false)
   }, [])
 
   // a payload of its own is a new question: what was chosen for the last one
@@ -123,50 +96,50 @@ export function useCddlSchema(binaryData?: string, subject?: string): UseCddlSch
     // must not take away the rule its author picked
     if (isChosen) return
 
-    setSelectedSchemaId("")
-    setSelectedRule("")
     setShowSchemaControls(false)
-    setDecodedData(null)
 
-    if (schemas.length == 0) return
-
-    // a subject that has been read before says which rule it carries, which is
-    // as true of a payload being written as of one that just arrived
-    if (subject) {
-      const cached = getTopicCache().lookup(subject)
-      if (cached && cached.confidence > CACHE_CONFIDENCE_THRESHOLD) {
-        const cachedSchema = schemas.find(s => s.id === cached.schema || s.name === cached.schema)
-        if (cachedSchema) {
-          setSelectedSchemaId(cachedSchema.id || cachedSchema.name)
-          setSelectedRule(cached.messageType)
-          setIsFromCache(true)
-          return
-        }
-      }
-    }
-    setIsFromCache(false)
-    if (binaryData) autoDetectRule()
-  }, [binaryData, schemas.length, subject, isChosen])
-
-  useEffect(() => {
-    if (!binaryData) {
-      setDecodedData(null)
+    if (schemas.length == 0) {
+      choose(undefined, "", false)
       return
     }
 
-    // the payload is decoded with or without a schema: CDDL only adds a verdict
-    const result = decodeAndValidateCbor(binaryData, selectedSchema, selectedRule || undefined)
-    setDecodedData(result)
-
-    if (subject && selectedSchema && selectedRule && !isFromCache) {
-      const cache = getTopicCache()
-      if (result.valid) {
-        cache.onSuccessfulDecode(subject, selectedSchema.id || selectedSchema.name, selectedRule)
-      } else {
-        cache.onDecodeFailed(subject)
-      }
+    // nothing to read yet: a payload being written takes the rule its subject
+    // carried last time, there being no payload to tell one rule from another
+    if (!binaryData) {
+      const remembered = rememberedFor(subject, schemas)
+      choose(remembered?.schema, remembered?.rule ?? "", !!remembered)
+      return
     }
-  }, [binaryData, selectedSchema, selectedRule, subject, isFromCache])
+
+    const answer = resolveCbor(binaryData, schemas, subject)
+
+    // the card is the one place a subject is learned from, so it is also the
+    // place a mapping that stopped holding is unlearned
+    if (answer.cacheStale && subject) getTopicCache().onDecodeFailed(subject)
+
+    choose(answer.schema, answer.rule ?? "", answer.fromCache)
+  }, [binaryData, schemas, subject, isChosen, choose])
+
+  const decodedData = useMemo(
+    () => binaryData
+      ? decodeAndValidateCbor(binaryData, selectedSchema, selectedRule || undefined)
+      : null,
+    [binaryData, selectedSchema, selectedRule],
+  )
+
+  useEffect(() => {
+    if (!decodedData || !subject || !selectedSchema || !selectedRule) return
+
+    const cache = getTopicCache()
+    if (decodedData.valid === false) {
+      // a rule that does not hold is not the rule for this subject, however it
+      // was arrived at: a recalled one that has gone wrong has to lose ground
+      // or it would be recalled forever
+      cache.onDecodeFailed(subject)
+    } else if (decodedData.valid === true && !fromCache) {
+      cache.onSuccessfulDecode(subject, idOf(selectedSchema), selectedRule)
+    }
+  }, [decodedData, subject, selectedSchema, selectedRule, fromCache])
 
   return {
     schemas,
@@ -174,7 +147,6 @@ export function useCddlSchema(binaryData?: string, subject?: string): UseCddlSch
     selectedRule,
     decodedData,
     isLoadingSchemas,
-    isAutoDetecting,
     showSchemaControls,
     availableRules,
     selectedSchema,

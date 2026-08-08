@@ -23,7 +23,6 @@ const CborForm: FunctionComponent<Props> = ({ text, subject, style, onChange }) 
     selectedSchemaId,
     selectedRule,
     isLoadingSchemas,
-    isAutoDetecting,
     showSchemaControls,
     availableRules,
     selectedSchema,
@@ -124,7 +123,6 @@ const CborForm: FunctionComponent<Props> = ({ text, subject, style, onChange }) 
           selectedRule={selectedRule}
           availableRules={availableRules}
           isLoadingSchemas={isLoadingSchemas}
-          isAutoDetecting={isAutoDetecting}
           onSchemaChange={setSelectedSchemaId}
           onRuleChange={rule => {
             setSelectedRule(rule)

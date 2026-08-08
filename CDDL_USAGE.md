@@ -62,9 +62,10 @@ GIFs are under [`docs/images/`](docs/images/). Schemas used: `person.cddl`, `ord
 
 ## Smart features
 
-- Subject → schema/type cache (like Protobuf)
+- Subject → schema/type cache. A remembered type is re-checked against each payload, so a schema that changes underneath is detected again instead of staying wrong
 - Valid CBOR always decodes; CDDL only adds a match verdict
-- Server log: schema directory scan (`--log-level=debug` for each file). **LOGS** card: load count and successful auto-detects
+- Detection is bounded at 200 schemas per payload. Reaching the bound is reported in the **LOGS** card, never passed over in silence
+- Server log: schema directory scan (`--log-level=debug` for each file). **LOGS** card: load count, detections, and anything that went undetected
 
 ## Testing
 
@@ -82,5 +83,6 @@ Live round-trip (needs NATS + NUI): `NUI_E2E=1 npx vitest run src/utils/cbor/e2e
 - **Wrong fields** — type is a helper (`uuid`); switch to the message type (`order` / `person`)
 - **Not sent** — footer still waiting on a field, or Text mode is not valid CBOR
 - **Mismatch on read** — payload decoded but does not match the selected type
+- **Shown as plain CBOR** — the **LOGS** card says why: no schema matched, or more than 200 schemas are present and the rest were not tried. Pick the schema and type by hand
 
 That's it. Drop `.cddl` files next to your protobuf schemas workflow and pick **cbor**.

@@ -19,7 +19,6 @@ const CborCmp: FunctionComponent<Props> = ({ text, style, subject }) => {
     selectedRule,
     decodedData,
     isLoadingSchemas,
-    isAutoDetecting,
     showSchemaControls,
     availableRules,
     selectedSchema,
@@ -53,7 +52,6 @@ const CborCmp: FunctionComponent<Props> = ({ text, style, subject }) => {
           selectedRule={selectedRule}
           availableRules={availableRules}
           isLoadingSchemas={isLoadingSchemas}
-          isAutoDetecting={isAutoDetecting}
           onSchemaChange={setSelectedSchemaId}
           onRuleChange={setSelectedRule}
           onRefreshSchemas={refreshSchemas}
