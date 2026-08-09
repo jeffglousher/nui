@@ -29,11 +29,9 @@ func NewSlogger(logLevel, output string) (*slog.Logger, error) {
 }
 func openLogWriter(output string) (io.Writer, error) {
 	if output != "" {
-		w, err := os.OpenFile(output, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
-		if err != nil {
-			return nil, err
-		}
-		return w, nil
+		// Size-bounded rotating file so long-running instances don't grow the
+		// log without limit.
+		return newRotatingWriter(output, defaultMaxLogBytes)
 	}
 	return os.Stdout, nil
 }
