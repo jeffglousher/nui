@@ -24,7 +24,7 @@ interface SerializedNode {
   }
 }
 
-/** Topic → CDDL schema+rule cache (mirrors ProtobufTopicCache) */
+/** Topic → CDDL schema+rule cache */
 export class CddlTopicCache {
   private trie = new TopicTrie()
   private dirty = false

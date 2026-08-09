@@ -18,7 +18,6 @@ interface UseCddlSchemaReturn {
   setShowSchemaControls: (show: boolean) => void
   refreshSchemas: () => Promise<void>
   autoDetectRule: () => void
-  resetSelection: () => void
 }
 
 function idOf(schema: CddlSchema): string {
@@ -67,12 +66,6 @@ export function useCddlSchema(binaryData?: string, subject?: string): UseCddlSch
     setIsChosen(true)
     choose(found.schema, found.rule, false)
   }, [binaryData, schemas, subject, choose])
-
-  const resetSelection = useCallback(() => {
-    choose(undefined, "", false)
-    setShowSchemaControls(false)
-    setIsChosen(false)
-  }, [choose])
 
   const chooseSchema = useCallback((id: string) => {
     setIsChosen(true)
@@ -155,6 +148,5 @@ export function useCddlSchema(binaryData?: string, subject?: string): UseCddlSch
     setShowSchemaControls,
     refreshSchemas,
     autoDetectRule,
-    resetSelection,
   }
 }

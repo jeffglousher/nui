@@ -38,7 +38,7 @@ person = {
 3. **Read:** the payload is decoded; a matching type is auto-detected when possible
 4. **Send:** fill the fields (or switch to **Text** for diagnostic notation / JSON) and SEND
 
-One type at a time is intentional — same idea as Protobuf’s message type. Helpers in the file (`uuid`, `line`) stay in the list if you need them, but opening the schema lands on the message type.
+One type at a time is intentional. Helpers in the file (`uuid`, `line`) stay in the list if you need them, but opening the schema lands on the message type.
 
 ### Walkthroughs
 
@@ -85,4 +85,4 @@ Live round-trip (needs NATS + NUI): `NUI_E2E=1 npx vitest run src/utils/cbor/e2e
 - **Mismatch on read** — payload decoded but does not match the selected type
 - **Shown as plain CBOR** — the **LOGS** card says why: no schema matched, or more than 200 schemas are present and the rest were not tried. Pick the schema and type by hand
 
-That's it. Drop `.cddl` files next to your protobuf schemas workflow and pick **cbor**.
+That's it. Drop `.cddl` files in the schemas directory and pick **cbor**.

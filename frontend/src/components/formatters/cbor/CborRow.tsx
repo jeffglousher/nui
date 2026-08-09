@@ -29,7 +29,7 @@ const CborRow: FunctionComponent<Props> = ({ text, style, subject }) => {
     if (!resolution?.schema || !resolution.rule) return null
     const name = resolution.schema.name
     const shown = name.length > 30 ? `...${name.slice(-27)}` : name
-    return `${shown}:${resolution.rule}`
+    return `${shown} \u203a ${resolution.rule}`
   }, [resolution])
 
   if (!text || !resolution) return null

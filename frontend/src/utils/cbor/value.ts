@@ -230,7 +230,7 @@ export function fromPayload(field: CborField, payload: string): { value: CborVal
 }
 
 /** Whether a decoded value could be what a field stands for */
-export function fits(field: CborField, js: unknown): boolean {
+function fits(field: CborField, js: unknown): boolean {
   const plain = untag(js, field)
   switch (field.kind) {
     case 'text':

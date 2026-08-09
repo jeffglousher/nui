@@ -61,7 +61,7 @@ export function bytesToBinaryString(bytes: Uint8Array): string {
  * are dropped silently. They are rendered here the way CBOR diagnostic
  * notation writes them.
  */
-export function toJsonSafe(value: unknown): unknown {
+function toJsonSafe(value: unknown): unknown {
   const tag = CBOR.Tag.get(value)
   if (tag != null) {
     // bytes and arrays carry their tag on themselves, so what is inside a tag
