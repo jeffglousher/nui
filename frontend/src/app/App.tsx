@@ -2,6 +2,7 @@
 import MainMenu from "@/app/mainMenu/MainMenu"
 import docsSo from "@/stores/docs"
 import { ProtobufSchemaProvider } from "@/contexts/ProtobufSchemaContext"
+import { CddlSchemaProvider } from "@/contexts/CddlSchemaContext"
 import { useStore } from "@priolo/jon"
 import { FunctionComponent } from "react"
 import cls from "./App.module.css"
@@ -28,20 +29,22 @@ const App: FunctionComponent = () => {
 
 	return (
 		<ProtobufSchemaProvider>
-			<div className={`${cls.root} ${cls[layoutSo.state.theme]}`}>
+			<CddlSchemaProvider>
+				<div className={`${cls.root} ${cls[layoutSo.state.theme]}`}>
 
-				<ZenCard />
+					<ZenCard />
 
-				<MainMenu />
+					<MainMenu />
 
-				<div className={clsContent}>
-					<DeckGroup />
-					<DrawerGroup />
+					<div className={clsContent}>
+						<DeckGroup />
+						<DrawerGroup />
+					</div>
+
+					<DragCmp />
+					<TooltipCmp />
 				</div>
-
-				<DragCmp />
-				<TooltipCmp />
-			</div>
+			</CddlSchemaProvider>
 		</ProtobufSchemaProvider>
 	)
 }
