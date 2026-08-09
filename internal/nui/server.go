@@ -33,7 +33,14 @@ func NewServer(port string, nui *Nui, l logging.Slogger, isDesktop bool) *App {
 	}
 	sLog, ok := l.(*slog.Logger)
 	if ok {
-		app.Use(slogfiber.New(sLog))
+		// Skip the highest-frequency, lowest-value request logs (health polling
+		// and static asset fetches) so long-running instances don't flood logs.
+		// API, websocket, and navigation requests are still logged.
+		app.Use(slogfiber.NewWithFilters(sLog,
+			slogfiber.IgnorePath("/health"),
+			slogfiber.IgnorePathPrefix("/assets"),
+			slogfiber.IgnorePathSuffix(".js", ".css", ".map", ".ico", ".png", ".svg", ".woff", ".woff2"),
+		))
 	}
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelDefault,
