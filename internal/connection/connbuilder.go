@@ -22,6 +22,24 @@ func NatsBuilder(connection *Connection) (*NatsConn, error) {
 	return NewNatsConn(strings.Join(connection.Hosts, ", "), options...)
 }
 
+// DialOnce opens a short-lived NATS connection that is not pooled and does
+// not reconnect. Callers must Close it. Used for Discovery listens so a
+// catch-all subscribe cannot stall the shared MESSAGES connection.
+func DialOnce(connection *Connection) (*nats.Conn, error) {
+	options := []nats.Option{
+		nats.RetryOnFailedConnect(false),
+		nats.MaxReconnects(0),
+		nats.Timeout(3 * time.Second),
+		nats.PingInterval(2 * time.Second),
+		nats.MaxPingsOutstanding(2),
+		nats.Name(CONNECTION_NAME_NUI_PREFIX + connection.Name + "-discover"),
+	}
+	options = appendAuthOption(connection, options)
+	options = appendTLSAuthOptions(connection, options)
+	options = appendInboxPrefixOption(connection, options)
+	return nats.Connect(strings.Join(connection.Hosts, ", "), options...)
+}
+
 func appendConnectionNameOption(connection *Connection, options []nats.Option) []nats.Option {
 	return append(options, nats.Name(CONNECTION_NAME_NUI_PREFIX+connection.Name))
 }

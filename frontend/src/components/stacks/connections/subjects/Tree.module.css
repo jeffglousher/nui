@@ -1,0 +1,98 @@
+.root {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 4px 0 8px;
+}
+
+.node {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 4px 6px;
+	border-radius: 5px;
+	cursor: pointer;
+}
+
+.node:hover {
+	background-color: rgba(255, 255, 255, .08);
+}
+
+.selected {
+	background-color: var(--cmp-select-bg);
+	color: var(--cmp-select-fg);
+}
+
+.twist {
+	width: 22px;
+	height: 22px;
+	flex: 0 0 22px;
+	opacity: .9;
+	font-size: 14px;
+	line-height: 22px;
+	text-align: center;
+	cursor: pointer;
+}
+
+.segment {
+	font-weight: 700;
+	flex: 1 1 80px;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.meta {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 4px;
+	flex: 1 1 120px;
+}
+
+.chip {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: .03em;
+	padding: 1px 5px;
+	border-radius: 4px;
+	max-width: 140px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.core {
+	background-color: rgba(16, 243, 243, .35);
+	color: #111;
+}
+
+.js {
+	background-color: rgba(235, 251, 53, .45);
+	color: #111;
+}
+
+.count {
+	font-size: 11px;
+	opacity: .75;
+}
+
+.remainder {
+	opacity: .65;
+	cursor: default;
+}
+
+.empty {
+	white-space: normal;
+	line-height: 1.45;
+	padding: 8px 2px 12px;
+}
+
+.children {
+	margin-left: 14px;
+	border-left: 2px solid rgba(255, 255, 255, .22);
+	padding-left: 8px;
+}
