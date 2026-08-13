@@ -1,6 +1,6 @@
 ## INDEX
 
-Discovery is two requests. JetStream returns capture patterns immediately. Core listens only when you give it a real name, on its own connection, then unsubscribes. Neither response includes payloads.
+Discovery is two requests. JetStream returns capture names immediately. Core listens on a dedicated connection, then unsubscribes. An empty filter means `>` — that is how you look around. Neither response includes payloads. Busy lists are capped.
 
 ### JETSTREAM PATTERNS
 
@@ -17,10 +17,10 @@ GET /api/connection/:id/subjects/jetstream
 ### CORE LISTEN
 
 ```
-GET /api/connection/:id/subjects/core?filter=orders.>&listen_ms=2000
+GET /api/connection/:id/subjects/core?filter=>&listen_ms=2000
 ```
 
-`filter` is required. `>` and other catch-alls are rejected. Uses a short-lived connection, not the pooled MESSAGES connection.
+`filter` defaults to `>`. Catch-alls are allowed. Uses a short-lived connection, not the pooled MESSAGES connection. Name count and listen window are capped.
 
 ### OCCUPIED NAMES
 

@@ -106,7 +106,7 @@ const SubjectsView: FunctionComponent<Props> = ({
 				<TextInput
 					style={{ flex: 1 }}
 					value={subjectsSa.filter}
-					placeholder="orders.>"
+					placeholder=">"
 					onChange={handleFilterChange}
 					onKeyEnter={() => subjectsSo.listenNow()}
 				/>

@@ -12,6 +12,5 @@ export function shouldFetchCore(enabled: boolean, filter: string, hasCatalog: bo
 	if (!enabled) return false
 	if (!canListen(filter)) return false
 	if (reason == "refresh") return true
-	if (reason == "open") return false
 	return !hasCatalog
 }

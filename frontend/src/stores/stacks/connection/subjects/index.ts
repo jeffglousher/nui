@@ -5,7 +5,7 @@ import viewSetup, { ViewStore } from "@/stores/stacks/viewBase"
 import { DOC_TYPE } from "@/types"
 import { OccupiedCatalog, SubjectHit, CoreCatalog, JetStreamCatalog } from "@/types/Subject"
 import { MSG_FORMAT } from "@/utils/editor"
-import { canListen, validateListenFilter } from "@/utils/subjects/filter"
+import { canListen, normalizeListenFilter, validateListenFilter } from "@/utils/subjects/filter"
 import { shouldFetchCore, shouldFetchJetStream, DiscoverReason } from "@/utils/subjects/fetch"
 import { occupiedKey } from "@/utils/subjects/tree"
 import { mixStores } from "@priolo/jon"
@@ -20,7 +20,7 @@ const setup = {
 
 		coreEnabled: true,
 		jetstreamEnabled: true,
-		filter: "",
+		filter: ">",
 		listenMs: 2000,
 
 		core: <CoreCatalog>null,
@@ -66,7 +66,7 @@ const setup = {
 			state.connectionId = data.connectionId
 			state.coreEnabled = data.coreEnabled ?? true
 			state.jetstreamEnabled = data.jetstreamEnabled ?? true
-			state.filter = data.filter ?? ""
+			state.filter = data.filter ?? ">"
 			state.listenMs = data.listenMs ?? 2000
 			state.textSearch = data.textSearch
 			state.format = data.format
@@ -104,8 +104,9 @@ const setup = {
 		},
 
 		async fetchCore(_: void, store?: SubjectsStore) {
-			if (!canListen(store.state.filter)) return
-			const filter = store.state.filter.trim()
+			const filter = normalizeListenFilter(store.state.filter)
+			if (!canListen(filter)) return
+			if (store.state.filter != filter) store.setFilter(filter)
 			const gen = store.state.listenGen + 1
 			store.state.listenGen = gen
 			store.setCoreListening(true)
@@ -151,11 +152,13 @@ const setup = {
 		},
 
 		async listenNow(_: void, store?: SubjectsStore) {
-			const problem = validateListenFilter(store.state.filter)
+			const filter = normalizeListenFilter(store.state.filter)
+			const problem = validateListenFilter(filter)
 			if (problem) {
 				store.setListenHint(problem)
 				return
 			}
+			if (store.state.filter != filter) store.setFilter(filter)
 			store.setListenHint(null)
 			await store.fetchCore()
 		},

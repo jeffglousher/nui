@@ -12,12 +12,12 @@ describe("shouldFetchJetStream", () => {
 })
 
 describe("shouldFetchCore", () => {
-	it("never listens on open, and never listens to a catch-all", () => {
-		expect(shouldFetchCore(true, "orders.>", false, "open")).toBe(false)
-		expect(shouldFetchCore(true, ">", false, "refresh")).toBe(false)
-		expect(shouldFetchCore(true, "", false, "toggle")).toBe(false)
-		expect(shouldFetchCore(true, "orders.>", false, "toggle")).toBe(true)
-		expect(shouldFetchCore(true, "orders.>", true, "toggle")).toBe(false)
-		expect(shouldFetchCore(true, "orders.>", true, "refresh")).toBe(true)
+	it("starts discovery on open, including a catch-all", () => {
+		expect(shouldFetchCore(true, ">", false, "open")).toBe(true)
+		expect(shouldFetchCore(true, "", false, "open")).toBe(true)
+		expect(shouldFetchCore(true, "orders.>", false, "open")).toBe(true)
+		expect(shouldFetchCore(true, "orders..x", false, "open")).toBe(false)
+		expect(shouldFetchCore(true, ">", true, "toggle")).toBe(false)
+		expect(shouldFetchCore(true, ">", true, "refresh")).toBe(true)
 	})
 })

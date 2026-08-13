@@ -7,9 +7,7 @@ import (
 )
 
 var (
-	errFilterRequired = errors.New("type a name to listen, like orders.>")
-	errFilterTooBroad = errors.New("listening to every name at once is too broad")
-	errFilterInvalid  = errors.New("that is not a valid name")
+	errFilterInvalid = errors.New("that is not a valid name")
 )
 
 const (
@@ -20,18 +18,22 @@ const (
 	kindOccupied = "occupied"
 )
 
-func validateListenFilter(filter string) error {
+func normalizeListenFilter(filter string) string {
 	filter = strings.TrimSpace(filter)
 	if filter == "" {
-		return errFilterRequired
+		return ">"
 	}
+	return filter
+}
+
+func validateListenFilter(filter string) error {
+	filter = normalizeListenFilter(filter)
 	for _, r := range filter {
 		if unicode.IsSpace(r) {
 			return errFilterInvalid
 		}
 	}
 	tokens := strings.Split(filter, ".")
-	literal := 0
 	for i, tok := range tokens {
 		if tok == "" {
 			return errFilterInvalid
@@ -48,10 +50,6 @@ func validateListenFilter(filter string) error {
 		if strings.ContainsAny(tok, "*>") {
 			return errFilterInvalid
 		}
-		literal++
-	}
-	if literal == 0 {
-		return errFilterTooBroad
 	}
 	return nil
 }

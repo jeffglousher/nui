@@ -14,13 +14,14 @@ import (
 )
 
 // HandleCoreListen samples Core NATS on a dedicated short-lived connection.
-// It never uses the pooled connection. The filter is required and must not
-// be a catch-all. Payloads are not returned.
+// It never uses the pooled connection. An empty filter means ">" — that is
+// how discovery looks around. A short window and name cap keep it bounded.
+// Payloads are not returned.
 func (a *App) HandleCoreListen(c *fiber.Ctx) error {
 	if c.Params("id") == "" {
 		return c.Status(422).JSON("id is required")
 	}
-	filter := strings.TrimSpace(c.Query("filter"))
+	filter := normalizeListenFilter(c.Query("filter"))
 	if err := validateListenFilter(filter); err != nil {
 		return c.Status(422).JSON(NewError(err.Error()))
 	}
