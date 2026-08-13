@@ -4,7 +4,7 @@ import { FILTER_INVALID, FILTER_REQUIRED, FILTER_TOO_BROAD, canListen, normalize
 export const LEGEND = [
 	"A subject is a name a message travels on, like orders.created.",
 	"Core is live and forgets. JetStream keeps messages. live means we just heard it. ORDERS or KV is the store that kept it.",
-	"LISTEN hears every name for a few seconds. Narrow with a prefix like orders.> if you want. Busy lists are capped.",
+	"ALL listens for every name (>) for a few seconds. Type a prefix like orders.> to narrow. Busy lists are capped.",
 ]
 
 export function coreListenLabel(filter: string): string {

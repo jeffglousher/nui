@@ -27,3 +27,7 @@ export function validateListenFilter(filter: string): string | null {
 export function canListen(filter: string): boolean {
 	return validateListenFilter(filter) == null
 }
+
+export function isCatchAll(filter: string): boolean {
+	return normalizeListenFilter(filter) == ">"
+}

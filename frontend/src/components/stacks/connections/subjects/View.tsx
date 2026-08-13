@@ -5,6 +5,7 @@ import { SubjectsStore } from "@/stores/stacks/connection/subjects"
 import { LOAD_STATE } from "@/stores/stacks/utils"
 import { SubjectNode } from "@/types/Subject"
 import { emptyCopy, firstListenCopy, LEGEND, listenHintCopy, statusLines } from "@/utils/subjects/copy"
+import { isCatchAll } from "@/utils/subjects/filter"
 import { buildSubjectTree, filterTree, flattenHits } from "@/utils/subjects/tree"
 import { Button, CircularLoadingCmp, TextInput } from "@priolo/jack"
 import { useStore } from "@priolo/jon"
@@ -43,6 +44,12 @@ const SubjectsView: FunctionComponent<Props> = ({
 	const handleFilterChange = (value: string) => {
 		subjectsSo.setListenHint(null)
 		subjectsSo.setFilter(value)
+	}
+	const handleFilterBlur = () => {
+		subjectsSo.revealCatchAll()
+	}
+	const handleAll = () => {
+		subjectsSo.listenAll()
 	}
 
 	const hits = useMemo(() => flattenHits({
@@ -103,11 +110,17 @@ const SubjectsView: FunctionComponent<Props> = ({
 		{subjectsSa.coreEnabled && (
 			<div className={cls.filter}>
 				<div className="jack-lbl-prop">LISTEN FOR</div>
+				<Button
+					select={isCatchAll(subjectsSa.filter)}
+					children="ALL"
+					onClick={handleAll}
+				/>
 				<TextInput
 					style={{ flex: 1 }}
 					value={subjectsSa.filter}
-					placeholder=">"
+					placeholder="ex. orders.>"
 					onChange={handleFilterChange}
+					onBlur={handleFilterBlur}
 					onKeyEnter={() => subjectsSo.listenNow()}
 				/>
 				<Button
