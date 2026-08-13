@@ -4,10 +4,9 @@ import layoutSo from "@/stores/layout"
 import { SubjectsStore } from "@/stores/stacks/connection/subjects"
 import { LOAD_STATE } from "@/stores/stacks/utils"
 import { SubjectNode } from "@/types/Subject"
-import { emptyCopy, firstListenCopy, LEGEND, statusLines } from "@/utils/subjects/copy"
-import { canListen } from "@/utils/subjects/filter"
+import { emptyCopy, firstListenCopy, LEGEND, listenHintCopy, statusLines } from "@/utils/subjects/copy"
 import { buildSubjectTree, filterTree, flattenHits } from "@/utils/subjects/tree"
-import { Button, CircularLoadingCmp, FindInputHeader, OptionsCmp, TextInput } from "@priolo/jack"
+import { Button, CircularLoadingCmp, TextInput } from "@priolo/jack"
 import { useStore } from "@priolo/jon"
 import { FunctionComponent, useEffect, useMemo, useState } from "react"
 import clsCardBoring from "../../CardBoringDef.module.css"
@@ -42,6 +41,7 @@ const SubjectsView: FunctionComponent<Props> = ({
 		if (node.hit) subjectsSo.openHit(node.hit)
 	}
 	const handleFilterChange = (value: string) => {
+		subjectsSo.setListenHint(null)
 		subjectsSo.setFilter(value)
 	}
 
@@ -51,11 +51,12 @@ const SubjectsView: FunctionComponent<Props> = ({
 		occupied: subjectsSa.occupied,
 		showCore: subjectsSa.coreEnabled,
 		showJetStream: subjectsSa.jetstreamEnabled,
-	}), [subjectsSa.core, subjectsSa.jetstream, subjectsSa.occupied, subjectsSa.coreEnabled, subjectsSa.jetstreamEnabled])
+		filter: subjectsSa.filter,
+	}), [subjectsSa.core, subjectsSa.jetstream, subjectsSa.occupied, subjectsSa.coreEnabled, subjectsSa.jetstreamEnabled, subjectsSa.filter])
 	const tree = useMemo(() => filterTree(buildSubjectTree(hits), subjectsSa.textSearch), [hits, subjectsSa.textSearch])
 	const status = useMemo(
-		() => statusLines(subjectsSa.coreEnabled, subjectsSa.jetstreamEnabled, subjectsSa.core, subjectsSa.jetstream),
-		[subjectsSa.coreEnabled, subjectsSa.jetstreamEnabled, subjectsSa.core, subjectsSa.jetstream],
+		() => statusLines(subjectsSa.coreEnabled, subjectsSa.jetstreamEnabled, subjectsSa.core, subjectsSa.jetstream, subjectsSa.occupied, subjectsSa.filter),
+		[subjectsSa.coreEnabled, subjectsSa.jetstreamEnabled, subjectsSa.core, subjectsSa.jetstream, subjectsSa.occupied, subjectsSa.filter],
 	)
 	const empty = useMemo(
 		() => emptyCopy({
@@ -64,28 +65,24 @@ const SubjectsView: FunctionComponent<Props> = ({
 			core: subjectsSa.core,
 			js: subjectsSa.jetstream,
 			search: subjectsSa.textSearch,
-			foundCount: hits.length,
+			foundCount: tree.length,
 		}),
-		[subjectsSa.coreEnabled, subjectsSa.jetstreamEnabled, subjectsSa.core, subjectsSa.jetstream, subjectsSa.textSearch, hits],
+		[subjectsSa.coreEnabled, subjectsSa.jetstreamEnabled, subjectsSa.core, subjectsSa.jetstream, subjectsSa.textSearch, tree],
 	)
-	const loading = subjectsSa.loadingState == LOAD_STATE.LOADING
-	const listening = loading && canListen(subjectsSa.filter) && subjectsSa.coreEnabled
-	const firstPaint = loading && !subjectsSa.jetstream && !subjectsSa.core
+	const jsLoading = subjectsSa.loadingState == LOAD_STATE.LOADING
+	const listening = subjectsSa.coreListening
+	const firstPaint = jsLoading && !subjectsSa.jetstream && !subjectsSa.core
+	const hint = listenHintCopy(subjectsSa.listenHint)
 	const clsCard = layoutSo.state.theme == "redeye" ? clsCardRedeye : clsCardBoring
-	const listenReady = canListen(subjectsSa.filter)
 
 	return <FrameworkCard
 		className={clsCard.root}
 		icon={<SubjectsIcon />}
 		store={subjectsSo}
 		actionsRender={<>
-			<OptionsCmp
-				style={{ marginLeft: 5, backgroundColor: "rgba(255,255,255,.4)" }}
-				store={subjectsSo}
-			/>
-			<FindInputHeader
-				value={textFind}
-				onChange={handleSearchChange}
+			<Button
+				children="REFRESH"
+				onClick={() => subjectsSo.fetch()}
 			/>
 			<Button
 				select={subjectsSa.coreEnabled}
@@ -114,16 +111,29 @@ const SubjectsView: FunctionComponent<Props> = ({
 					onKeyEnter={() => subjectsSo.listenNow()}
 				/>
 				<Button
-					children="LISTEN"
+					select={listening}
+					children={listening ? "LISTENING" : "LISTEN"}
 					onClick={() => subjectsSo.listenNow()}
 				/>
 			</div>
 		)}
 
-		{loading && (
+		{hint && <div className={cls.hint}>{hint}</div>}
+
+		<div className={cls.filter}>
+			<div className="jack-lbl-prop">FIND</div>
+			<TextInput
+				style={{ flex: 1 }}
+				value={textFind}
+				placeholder="narrow the list"
+				onChange={handleSearchChange}
+			/>
+		</div>
+
+		{(listening || jsLoading) && (
 			<div className={cls.banner}>
 				<CircularLoadingCmp style={{ width: 14, height: 14 }} />
-				{listening && listenReady
+				{listening
 					? firstListenCopy(subjectsSa.filter.trim(), subjectsSa.listenMs)
 					: "Reading stored names…"}
 			</div>
@@ -131,12 +141,14 @@ const SubjectsView: FunctionComponent<Props> = ({
 
 		{firstPaint
 			? null
-			: <div className={loading ? cls.busy : undefined}>
+			: <div className={cls.tree}>
 				<SubjectTree
 					nodes={tree}
 					select={subjectsSa.select}
 					onSelect={handleSelect}
 					empty={empty}
+					occupied={subjectsSa.occupied}
+					occupiedLoading={subjectsSa.occupiedLoading}
 				/>
 			</div>
 		}

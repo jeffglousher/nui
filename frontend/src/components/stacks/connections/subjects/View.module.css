@@ -15,18 +15,25 @@
 	flex-direction: column;
 	gap: 2px;
 	padding: 8px 0 2px;
+	white-space: normal;
+	overflow-wrap: anywhere;
 }
 
 .filter {
 	display: flex;
 	align-items: center;
+	flex-wrap: wrap;
 	gap: 8px;
 	margin: 0 0 8px;
 }
 
-.busy {
-	opacity: .55;
-	pointer-events: none;
+.hint {
+	font-size: 12px;
+	line-height: 1.4;
+	padding: 6px 8px;
+	margin: 0 0 8px;
+	border-radius: 6px;
+	background: rgba(255, 220, 80, .28);
 }
 
 .banner {
@@ -36,6 +43,11 @@
 	font-size: 12px;
 	opacity: .85;
 	margin-bottom: 8px;
+}
+
+.tree {
+	min-height: 120px;
+	overflow: auto;
 }
 
 .empty {

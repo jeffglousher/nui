@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { SubjectHit } from "@/types/Subject"
-import { buildSubjectTree, countLeaves, filterTree, flattenHits, MAX_TREE_CHILDREN } from "./tree"
+import { buildSubjectTree, countLeaves, filterTree, flattenHits, MAX_TREE_CHILDREN, occupiedKey } from "./tree"
 
 function hit(subject: string, opts: Partial<SubjectHit> = {}): SubjectHit {
 	return { subject, streams: [], ...opts }
@@ -22,6 +22,19 @@ describe("flattenHits", () => {
 		expect(hits).toHaveLength(1)
 		expect(hits[0].core?.count).toBe(2)
 		expect(hits[0].streams).toEqual([{ name: "ORDERS", kind: "stream", pattern: undefined, count: 40 }])
+	})
+
+	it("hides live names when the listen box no longer matches that listen", () => {
+		const hits = flattenHits({
+			showCore: true,
+			showJetStream: false,
+			filter: "devices.>",
+			core: {
+				filter: "orders.>", listenMs: 2000, heard: 1, truncated: false,
+				subjects: [{ subject: "orders.created", count: 2 }],
+			},
+		})
+		expect(hits).toEqual([])
 	})
 
 	it("hides a source when its toggle is off without refetching", () => {
@@ -56,6 +69,13 @@ describe("buildSubjectTree", () => {
 		expect(tree[0].children).toHaveLength(MAX_TREE_CHILDREN + 1)
 		expect(tree[0].children[MAX_TREE_CHILDREN].remainder).toBe(true)
 		expect(tree[0].children[MAX_TREE_CHILDREN].segment).toMatch(/12 more/)
+	})
+})
+
+describe("occupiedKey", () => {
+	it("matches the expand cache key used by the store", () => {
+		expect(occupiedKey("ORDERS", "orders.>")).toBe("ORDERS::orders.>")
+		expect(occupiedKey("ORDERS")).toBe("ORDERS::>")
 	})
 })
 

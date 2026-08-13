@@ -1,5 +1,6 @@
-import { SubjectNode } from "@/types/Subject"
+import { OccupiedCatalog, SubjectNode } from "@/types/Subject"
 import { leafTitle } from "@/utils/subjects/copy"
+import { occupiedKey } from "@/utils/subjects/tree"
 import { FunctionComponent, memo, useState } from "react"
 import cls from "./Tree.module.css"
 
@@ -8,15 +9,25 @@ interface Props {
 	select?: string
 	onSelect?: (node: SubjectNode) => void
 	empty?: string
+	occupied?: Record<string, OccupiedCatalog>
+	occupiedLoading?: string
 }
 
-const SubjectTree: FunctionComponent<Props> = ({ nodes, select, onSelect, empty }) => {
+const SubjectTree: FunctionComponent<Props> = ({ nodes, select, onSelect, empty, occupied, occupiedLoading }) => {
 	if (!nodes || nodes.length == 0) {
 		return <div className={`jack-lbl-empty color-fg ${cls.empty}`}>{empty ?? "No names to show."}</div>
 	}
 	return <div className={cls.root}>
 		{nodes.map(node => (
-			<TreeNode key={node.path} node={node} select={select} onSelect={onSelect} depth={0} />
+			<TreeNode
+				key={node.path}
+				node={node}
+				select={select}
+				onSelect={onSelect}
+				depth={0}
+				occupied={occupied}
+				occupiedLoading={occupiedLoading}
+			/>
 		))}
 	</div>
 }
@@ -28,12 +39,24 @@ interface NodeProps {
 	select?: string
 	onSelect?: (node: SubjectNode) => void
 	depth: number
+	occupied?: Record<string, OccupiedCatalog>
+	occupiedLoading?: string
 }
 
-const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, depth }) => {
+function occKeyFor(node: SubjectNode): string | null {
+	const stream = node.hit?.expandable ? node.hit.streams[0] : null
+	if (!stream) return null
+	return occupiedKey(stream.name, stream.pattern)
+}
+
+const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, depth, occupied, occupiedLoading }) => {
 	const hasChildren = node.children.length > 0
 	const [open, setOpen] = useState(depth < 2)
 	const selected = !!node.hit && node.path == select
+	const key = occKeyFor(node)
+	const occ = key ? occupied?.[key] : undefined
+	const loadingOcc = !!key && occupiedLoading == key
+	const loadedEmpty = !!node.hit?.expandable && !!occ && (occ.subjects?.length ?? 0) == 0 && !hasChildren
 	const clsNode = `${cls.node} ${selected ? cls.selected : ""} ${node.remainder ? cls.remainder : ""}`
 	const title = node.remainder
 		? node.segment
@@ -47,7 +70,7 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, d
 			setOpen(!open)
 			return
 		}
-		if (node.hit?.expandable) {
+		if (node.hit?.expandable && !loadedEmpty) {
 			setOpen(true)
 			onSelect?.(node)
 		}
@@ -56,7 +79,7 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, d
 		if (node.remainder) return
 		if (node.hit?.expandable) {
 			setOpen(true)
-			onSelect?.(node)
+			if (!loadedEmpty) onSelect?.(node)
 			return
 		}
 		if (node.hit) onSelect?.(node)
@@ -64,23 +87,25 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, d
 	}
 
 	const kindChip = node.hit?.kind == "kv" ? "kv"
-		: node.hit?.kind == "object" ? "object"
-			: node.hit?.kind == "pattern" ? "pattern"
-				: null
+		: node.hit?.kind == "object" ? "files"
+			: null
 
 	return (
 		<div>
 			<div className={clsNode} onClick={handleClick} title={title}>
 				<div className={cls.twist} onClick={handleTwist}>
-					{hasChildren ? (open ? "▾" : "▸") : node.hit?.expandable ? "▸" : ""}
+					{hasChildren ? (open ? "▾" : "▸") : node.hit?.expandable && !loadedEmpty ? "▸" : ""}
 				</div>
 				<div className={cls.segment}>{node.segment}</div>
 				<div className={cls.meta}>
 					{node.hit?.core && <span className={`${cls.chip} ${cls.core}`}>live</span>}
-					{kindChip && <span className={`${cls.chip} ${cls.js}`}>{kindChip}</span>}
+					{kindChip && <span className={`${cls.chip} ${cls.js}`} title={kindChip == "kv" ? "key/value bucket" : "object store"}>{kindChip}</span>}
 					{node.hit?.streams.filter(s => s.kind != "kv" && s.kind != "object").map(s => (
-						<span key={s.name} className={`${cls.chip} ${cls.js}`}>{s.name}</span>
+						<span key={s.name} className={`${cls.chip} ${cls.js}`} title={`kept by ${s.name}`}>{s.name}</span>
 					))}
+					{loadingOcc && <span className={cls.count}>loading</span>}
+					{loadedEmpty && !occ?.error && <span className={cls.count}>none stored</span>}
+					{occ?.error && <span className={cls.count}>{occ.error}</span>}
 					{!node.hit && !node.remainder && node.names > 0 && <span className={cls.count}>{node.names}</span>}
 					{node.remainder && <span className={cls.count}>{node.names}</span>}
 				</div>
@@ -88,7 +113,15 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, d
 			{hasChildren && open && (
 				<div className={cls.children}>
 					{node.children.map(child => (
-						<TreeNode key={child.path} node={child} select={select} onSelect={onSelect} depth={depth + 1} />
+						<TreeNode
+							key={child.path}
+							node={child}
+							select={select}
+							onSelect={onSelect}
+							depth={depth + 1}
+							occupied={occupied}
+							occupiedLoading={occupiedLoading}
+						/>
 					))}
 				</div>
 			)}

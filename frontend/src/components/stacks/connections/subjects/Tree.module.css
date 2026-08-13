@@ -8,8 +8,9 @@
 .node {
 	display: flex;
 	align-items: center;
+	flex-wrap: wrap;
 	gap: 6px;
-	padding: 3px 6px;
+	padding: 4px 6px;
 	border-radius: 5px;
 	cursor: pointer;
 }
@@ -24,16 +25,19 @@
 }
 
 .twist {
-	width: 14px;
-	flex: 0 0 14px;
+	width: 22px;
+	height: 22px;
+	flex: 0 0 22px;
 	opacity: .9;
-	font-size: 12px;
+	font-size: 14px;
+	line-height: 22px;
 	text-align: center;
+	cursor: pointer;
 }
 
 .segment {
 	font-weight: 700;
-	flex: 1;
+	flex: 1 1 80px;
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -43,8 +47,10 @@
 .meta {
 	display: flex;
 	align-items: center;
+	flex-wrap: wrap;
+	justify-content: flex-end;
 	gap: 4px;
-	flex: 0 0 auto;
+	flex: 1 1 120px;
 }
 
 .chip {
@@ -53,6 +59,10 @@
 	letter-spacing: .03em;
 	padding: 1px 5px;
 	border-radius: 4px;
+	max-width: 140px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .core {

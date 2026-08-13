@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { emptyCopy, jetStreamStatus, coreStatus, coreListenLabel, LEGEND, leafTitle } from "./copy"
+import { emptyCopy, jetStreamStatus, coreStatus, coreListenLabel, LEGEND, leafTitle, listenHintCopy, occupiedStatus, coreListenStale } from "./copy"
 import { canListen, validateListenFilter, FILTER_REQUIRED, FILTER_TOO_BROAD } from "./filter"
 
 describe("copy", () => {
@@ -21,7 +21,7 @@ describe("copy", () => {
 		})).toBe("Core heard 4 names in 2.0s on orders.>.")
 		expect(jetStreamStatus(true, {
 			streams: [{ name: "ORDERS", kind: "stream", subjects: [{ subject: "orders", kind: "pattern" }, { subject: "returns", kind: "pattern" }] }],
-		})).toBe("JetStream has 2 patterns in 1 stream.")
+		})).toBe("JetStream has 2 names to keep in 1 stream.")
 	})
 
 	it("teaches why an empty listen is not a broken server", () => {
@@ -58,10 +58,43 @@ describe("copy", () => {
 		})).toMatch(/not fully read/i)
 	})
 
+	it("tells you to click LISTEN instead of looking like a no-op", () => {
+		expect(listenHintCopy(FILTER_REQUIRED)).toMatch(/LISTEN/)
+		expect(emptyCopy({
+			coreEnabled: true, jsEnabled: true,
+			js: { streams: [] },
+			search: "", foundCount: 0,
+		})).toMatch(/LISTEN/)
+	})
+
+	it("says the search missed instead of pretending the catalog is empty", () => {
+		expect(emptyCopy({
+			coreEnabled: true, jsEnabled: true,
+			core: { filter: "orders.>", listenMs: 2000, heard: 1, truncated: false, subjects: [{ subject: "orders.created", count: 1 }] },
+			js: { streams: [{ name: "ORDERS", kind: "stream", subjects: [{ subject: "orders", kind: "pattern" }] }] },
+			search: "zzz", foundCount: 0,
+		})).toMatch(/search/i)
+	})
+
+	it("mentions a capped stored list after expand", () => {
+		expect(occupiedStatus({
+			"ORDERS::orders.>": { truncated: true, subjects: [] },
+		})).toMatch(/capped/i)
+	})
+
 	it("explains a catch-all listen instead of failing silently", () => {
 		expect(coreStatus(true, {
 			filter: ">", listenMs: 2000, heard: 0, truncated: false, subjects: [], error: FILTER_TOO_BROAD,
 		})).toMatch(/too broad/i)
+	})
+
+	it("hides leftover live names when the listen box changes", () => {
+		expect(coreListenStale({
+			filter: "orders.>", listenMs: 2000, heard: 1, truncated: false, subjects: [],
+		}, "devices.>")).toBe(true)
+		expect(coreStatus(true, {
+			filter: "orders.>", listenMs: 2000, heard: 2, truncated: false, subjects: [],
+		}, "devices.>")).toMatch(/LISTEN to sample devices\.>/)
 	})
 
 	it("describes a leaf without adding live and stored numbers together", () => {

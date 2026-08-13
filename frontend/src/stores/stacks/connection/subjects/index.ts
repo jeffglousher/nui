@@ -7,6 +7,7 @@ import { OccupiedCatalog, SubjectHit, CoreCatalog, JetStreamCatalog } from "@/ty
 import { MSG_FORMAT } from "@/utils/editor"
 import { canListen, validateListenFilter } from "@/utils/subjects/filter"
 import { shouldFetchCore, shouldFetchJetStream, DiscoverReason } from "@/utils/subjects/fetch"
+import { occupiedKey } from "@/utils/subjects/tree"
 import { mixStores } from "@priolo/jon"
 import loadBaseSetup, { LoadBaseState, LoadBaseStore } from "../../loadBase"
 import { MessageStore } from "../../message"
@@ -26,13 +27,16 @@ const setup = {
 		jetstream: <JetStreamCatalog>null,
 		occupied: <Record<string, OccupiedCatalog>>{},
 		occupiedLoading: <string>null,
+		listenHint: <string>null,
+		coreListening: false,
+		listenGen: 0,
 
 		textSearch: <string>null,
 		select: <string>null,
 
 		format: MSG_FORMAT.JSON,
 
-		width: 380,
+		width: 440,
 		widthMax: 900,
 	},
 
@@ -70,6 +74,8 @@ const setup = {
 
 		async fetch(_: void, store?: LoadBaseStore) {
 			const s = <SubjectsStore>store
+			s.setOccupied({})
+			s.setListenHint(null)
 			await s.discover("refresh")
 			await loadBaseSetup.actions.fetch(_, store)
 		},
@@ -88,7 +94,7 @@ const setup = {
 		},
 
 		async fetchJetStream(_: void, store?: SubjectsStore) {
-			const catalog = await subjectsApi.jetstream(store.state.connectionId, { store, manageAbort: true, noError: true })
+			const catalog = await subjectsApi.jetstream(store.state.connectionId, { store, noError: true })
 			if (!catalog) return
 			if (!Array.isArray(catalog.streams)) {
 				store.setJetstream({ streams: [], error: catalog.error || "could not be read" })
@@ -99,20 +105,37 @@ const setup = {
 
 		async fetchCore(_: void, store?: SubjectsStore) {
 			if (!canListen(store.state.filter)) return
-			const catalog = await subjectsApi.core(store.state.connectionId, store.state.filter.trim(), store.state.listenMs, { store, manageAbort: true, noError: true })
-			if (!catalog) return
-			if (!Array.isArray(catalog.subjects)) {
-				store.setCore({
-					filter: store.state.filter.trim(),
-					listenMs: store.state.listenMs,
-					heard: 0,
-					truncated: false,
-					subjects: [],
-					error: catalog.error || "could not listen",
+			const filter = store.state.filter.trim()
+			const gen = store.state.listenGen + 1
+			store.state.listenGen = gen
+			store.setCoreListening(true)
+			store.setCore({
+				filter,
+				listenMs: store.state.listenMs,
+				heard: 0,
+				truncated: false,
+				subjects: [],
+			})
+			try {
+				const catalog = await subjectsApi.core(store.state.connectionId, filter, store.state.listenMs, {
+					store, manageAbort: true, noError: true, loading: false,
 				})
-				return
+				if (store.state.listenGen != gen) return
+				if (!catalog || !Array.isArray(catalog.subjects)) {
+					store.setCore({
+						filter,
+						listenMs: store.state.listenMs,
+						heard: 0,
+						truncated: false,
+						subjects: [],
+						error: catalog?.error || "could not listen",
+					})
+					return
+				}
+				store.setCore(catalog)
+			} finally {
+				if (store.state.listenGen == gen) store.setCoreListening(false)
 			}
-			store.setCore(catalog)
 		},
 
 		async toggleCore(_: void, store?: SubjectsStore) {
@@ -130,16 +153,10 @@ const setup = {
 		async listenNow(_: void, store?: SubjectsStore) {
 			const problem = validateListenFilter(store.state.filter)
 			if (problem) {
-				store.setCore({
-					filter: store.state.filter.trim(),
-					listenMs: store.state.listenMs,
-					heard: 0,
-					truncated: false,
-					subjects: [],
-					error: problem,
-				})
+				store.setListenHint(problem)
 				return
 			}
+			store.setListenHint(null)
 			await store.fetchCore()
 		},
 
@@ -147,15 +164,23 @@ const setup = {
 			const stream = hit.streams[0]
 			if (!stream) return
 			const pattern = stream.pattern || ">"
-			const key = `${stream.name}::${pattern}`
+			const key = occupiedKey(stream.name, pattern)
 			if (store.state.occupied[key] || store.state.occupiedLoading == key) return
 			store.setOccupiedLoading(key)
 			try {
-				const catalog = await subjectsApi.occupied(store.state.connectionId, stream.name, pattern, { store, noError: true })
-				if (!catalog || !Array.isArray(catalog.subjects)) return
+				const catalog = await subjectsApi.occupied(store.state.connectionId, stream.name, pattern, {
+					store, noError: true, loading: false,
+				})
+				if (!catalog || !Array.isArray(catalog.subjects)) {
+					store.setOccupied({
+						...store.state.occupied,
+						[key]: { stream: stream.name, subjects: [], error: catalog?.error || "could not be read" },
+					})
+					return
+				}
 				store.setOccupied({ ...store.state.occupied, [key]: catalog })
 			} finally {
-				store.setOccupiedLoading(null)
+				if (store.state.occupiedLoading == key) store.setOccupiedLoading(null)
 			}
 		},
 
@@ -168,7 +193,7 @@ const setup = {
 			if (hit.kind != "occupied" && !hit.streams.some(s => s.count)) return
 			const stream = hit.streams[0]
 			if (!stream) return
-			const message = await subjectsApi.last(store.state.connectionId, hit.subject, stream.name, { store })
+			const message = await subjectsApi.last(store.state.connectionId, hit.subject, stream.name, { store, loading: false })
 			if (!message) return
 
 			const storeMsg = store.state.linked as MessageStore
@@ -196,6 +221,8 @@ const setup = {
 		setJetstream: (jetstream: JetStreamCatalog) => ({ jetstream }),
 		setOccupied: (occupied: Record<string, OccupiedCatalog>) => ({ occupied }),
 		setOccupiedLoading: (occupiedLoading: string) => ({ occupiedLoading }),
+		setListenHint: (listenHint: string) => ({ listenHint }),
+		setCoreListening: (coreListening: boolean) => ({ coreListening }),
 		setTextSearch: (textSearch: string) => ({ textSearch }),
 		setSelect: (select: string) => ({ select }),
 		setFormat: (format: MSG_FORMAT) => ({ format }),

@@ -2,12 +2,17 @@ import { CoreCatalog, JetStreamCatalog, OccupiedCatalog, SubjectHit, SubjectNode
 
 export const MAX_TREE_CHILDREN = 50
 
+export function occupiedKey(stream: string, pattern?: string): string {
+	return `${stream}::${pattern || ">"}`
+}
+
 export function flattenHits(opts: {
 	core?: CoreCatalog | null
 	jetstream?: JetStreamCatalog | null
 	occupied?: Record<string, OccupiedCatalog>
 	showCore: boolean
 	showJetStream: boolean
+	filter?: string
 }): SubjectHit[] {
 	const bySubject = new Map<string, SubjectHit>()
 
@@ -21,10 +26,14 @@ export function flattenHits(opts: {
 	}
 
 	if (opts.showCore && opts.core) {
-		for (const item of opts.core.subjects ?? []) {
-			const hit = ensure(item.subject)
-			hit.core = { count: item.count }
-			if (!hit.kind) hit.kind = "live"
+		const typed = opts.filter
+		const stale = typed != null && !!opts.core.filter && opts.core.filter != typed.trim()
+		if (!stale) {
+			for (const item of opts.core.subjects ?? []) {
+				const hit = ensure(item.subject)
+				hit.core = { count: item.count }
+				if (!hit.kind) hit.kind = "live"
+			}
 		}
 	}
 
