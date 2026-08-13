@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { emptyCopy, jetStreamStatus, coreStatus, coreListenLabel, LEGEND, leafTitle, listenHintCopy, occupiedStatus, coreListenStale, firstListenCopy } from "./copy"
-import { canListen, normalizeListenFilter, validateListenFilter, FILTER_INVALID } from "./filter"
+import { canListen, isCatchAll, normalizeListenFilter, validateListenFilter, FILTER_INVALID } from "./filter"
 
 describe("copy", () => {
 	it("defines Core and JetStream without assuming the reader knows NATS", () => {
@@ -8,7 +8,8 @@ describe("copy", () => {
 		expect(LEGEND[1]).toMatch(/forget/i)
 		expect(LEGEND[1]).toMatch(/store/i)
 		expect(LEGEND[1]).toMatch(/live/i)
-		expect(LEGEND[2]).toMatch(/every name/i)
+		expect(LEGEND[2]).toMatch(/ALL/)
+		expect(LEGEND[2]).toMatch(/>/)
 		expect(LEGEND[2]).toMatch(/capped/i)
 	})
 
@@ -125,5 +126,8 @@ describe("filter", () => {
 		expect(canListen("orders.>")).toBe(true)
 		expect(canListen("")).toBe(true)
 		expect(canListen("orders..x")).toBe(false)
+		expect(isCatchAll("")).toBe(true)
+		expect(isCatchAll(">")).toBe(true)
+		expect(isCatchAll("orders.>")).toBe(false)
 	})
 })

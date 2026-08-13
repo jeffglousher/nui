@@ -163,6 +163,16 @@ const setup = {
 			await store.fetchCore()
 		},
 
+		async listenAll(_: void, store?: SubjectsStore) {
+			store.setFilter(">")
+			store.setListenHint(null)
+			await store.fetchCore()
+		},
+
+		revealCatchAll(_: void, store?: SubjectsStore) {
+			if (!store.state.filter?.trim()) store.setFilter(">")
+		},
+
 		async loadOccupied(hit: SubjectHit, store?: SubjectsStore) {
 			const stream = hit.streams[0]
 			if (!stream) return
