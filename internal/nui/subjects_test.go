@@ -122,6 +122,7 @@ func TestSampleCoreHearsLiteralPrefixOnly(t *testing.T) {
 	out := sampleCore(context.Background(), nc, "orders.>", 400*time.Millisecond, true)
 	require.Empty(t, out.Error)
 	require.GreaterOrEqual(t, out.Heard, 1)
+	assert.GreaterOrEqual(t, out.Dropped, 0)
 	for _, s := range out.Subjects {
 		assert.Equal(t, "orders.created", s.Subject)
 		assert.Greater(t, s.Count, 0)

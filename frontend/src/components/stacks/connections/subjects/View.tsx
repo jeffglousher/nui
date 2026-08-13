@@ -113,6 +113,10 @@ const SubjectsView: FunctionComponent<Props> = ({
 					onChange={handleFilterChange}
 					onKeyEnter={() => subjectsSo.listenNow()}
 				/>
+				<Button
+					children="LISTEN"
+					onClick={() => subjectsSo.listenNow()}
+				/>
 			</div>
 		)}
 

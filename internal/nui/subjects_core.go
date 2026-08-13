@@ -107,9 +107,13 @@ func sampleCore(ctx context.Context, conn *nats.Conn, filter string, listen time
 	defer timer.Stop()
 
 	finish := func() {
+		pendingDropped, err := sub.Dropped()
 		unsubscribe()
-		pendingDropped, _ := sub.Dropped()
-		out.Dropped = pendingDropped + int(extraDropped.Load())
+		dropped := int(extraDropped.Load())
+		if err == nil && pendingDropped > 0 {
+			dropped += pendingDropped
+		}
+		out.Dropped = dropped
 		out.Heard = len(hits)
 		out.Subjects = make([]CoreSubject, 0, len(hits))
 		for _, hit := range hits {

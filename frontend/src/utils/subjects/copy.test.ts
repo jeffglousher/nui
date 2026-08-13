@@ -7,6 +7,7 @@ describe("copy", () => {
 		expect(LEGEND[0]).toMatch(/name a message travels on/i)
 		expect(LEGEND[1]).toMatch(/forget/i)
 		expect(LEGEND[1]).toMatch(/store/i)
+		expect(LEGEND[2]).toMatch(/orders\.>/)
 	})
 
 	it("asks for a listen name instead of offering all names", () => {
@@ -55,6 +56,12 @@ describe("copy", () => {
 			js: { streams: [], truncated: true },
 			search: "", foundCount: 0,
 		})).toMatch(/not fully read/i)
+	})
+
+	it("explains a catch-all listen instead of failing silently", () => {
+		expect(coreStatus(true, {
+			filter: ">", listenMs: 2000, heard: 0, truncated: false, subjects: [], error: FILTER_TOO_BROAD,
+		})).toMatch(/too broad/i)
 	})
 
 	it("describes a leaf without adding live and stored numbers together", () => {

@@ -1,9 +1,10 @@
 import { CoreCatalog, JetStreamCatalog } from "@/types/Subject"
-import { FILTER_REQUIRED } from "./filter"
+import { FILTER_INVALID, FILTER_REQUIRED, FILTER_TOO_BROAD } from "./filter"
 
 export const LEGEND = [
 	"A subject is a name a message travels on, like orders.created.",
 	"Core is live and forgets. JetStream is a store that keeps messages.",
+	"To listen, type a prefix with a >, like orders.>",
 ]
 
 export function coreListenLabel(filter: string): string {
@@ -20,6 +21,9 @@ export function coreStatus(enabled: boolean, core?: CoreCatalog | null): string 
 	if (!enabled) return "Core is off."
 	if (core?.error == "not allowed") return "This account cannot listen for that name."
 	if (core?.error == "timed out") return "The listen stopped before it finished."
+	if (core?.error == FILTER_REQUIRED) return "Type a name to listen, like orders.>"
+	if (core?.error == FILTER_TOO_BROAD) return "Listening to every name at once is too broad. Try something like orders.>"
+	if (core?.error == FILTER_INVALID) return "That is not a valid name. Use dots, like orders.created or orders.>"
 	if (core?.error) return `Core could not listen: ${core.error}.`
 	if (!core) return "Type a name to listen, like orders.>"
 	const names = core.heard ?? core.subjects?.length ?? 0

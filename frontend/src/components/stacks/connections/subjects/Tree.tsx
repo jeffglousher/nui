@@ -43,10 +43,22 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, d
 
 	const handleTwist = (e: React.MouseEvent) => {
 		e.stopPropagation()
-		if (hasChildren) setOpen(!open)
+		if (hasChildren) {
+			setOpen(!open)
+			return
+		}
+		if (node.hit?.expandable) {
+			setOpen(true)
+			onSelect?.(node)
+		}
 	}
 	const handleClick = () => {
 		if (node.remainder) return
+		if (node.hit?.expandable) {
+			setOpen(true)
+			onSelect?.(node)
+			return
+		}
 		if (node.hit) onSelect?.(node)
 		else if (hasChildren) setOpen(!open)
 	}

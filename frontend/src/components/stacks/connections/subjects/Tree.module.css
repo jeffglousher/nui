@@ -24,10 +24,11 @@
 }
 
 .twist {
-	width: 10px;
-	flex: 0 0 10px;
-	opacity: .7;
-	font-size: 10px;
+	width: 14px;
+	flex: 0 0 14px;
+	opacity: .9;
+	font-size: 12px;
+	text-align: center;
 }
 
 .segment {
