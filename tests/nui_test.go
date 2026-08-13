@@ -781,6 +781,80 @@ func (s *NuiTestSuite) TestProtoschemas() {
 	s.Contains(content, "package simple;")
 }
 
+func (s *NuiTestSuite) TestSubjectsSnapshot() {
+	e := s.e
+	connId := s.defaultConn()
+	s.filledStreamMultiSub("filled_stream", "js.sub1", "js.sub2")
+	time.Sleep(50 * time.Millisecond)
+
+	jsOnly := e.GET("/api/connection/"+connId+"/subjects").
+		WithQuery("core", "false").
+		WithQuery("jetstream", "true").
+		Expect().Status(http.StatusOK).JSON().Object()
+	jsOnly.Value("core").Object().Value("enabled").Boolean().IsFalse()
+	streams := jsOnly.Value("jetstream").Object().Value("streams").Array()
+	streams.Length().IsEqual(1)
+	streams.Value(0).Object().Value("name").String().IsEqual("filled_stream")
+	streams.Value(0).Object().Value("subjects").Array().Length().IsEqual(2)
+
+	last := e.GET("/api/connection/"+connId+"/subjects/last").
+		WithQuery("subject", "js.sub1").
+		WithQuery("stream", "filled_stream").
+		Expect().Status(http.StatusOK).JSON().Object()
+	last.Value("subject").String().IsEqual("js.sub1")
+	last.Value("payload").String().NotEmpty()
+
+	stop := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				_ = s.nc.Publish("core.hello", []byte("hi"))
+				_ = s.nc.Publish("core.world", []byte("there"))
+				time.Sleep(20 * time.Millisecond)
+			}
+		}
+	}()
+	time.Sleep(40 * time.Millisecond)
+
+	coreOnly := e.GET("/api/connection/"+connId+"/subjects").
+		WithQuery("core", "true").
+		WithQuery("jetstream", "false").
+		WithQuery("listen_ms", "400").
+		WithQuery("filter", "core.>").
+		Expect().Status(http.StatusOK).JSON().Object()
+	close(stop)
+	core := coreOnly.Value("core").Object()
+	core.Value("enabled").Boolean().IsTrue()
+	core.Value("filter").String().IsEqual("core.>")
+	core.Value("heard").Number().Ge(1)
+	subjects := core.Value("subjects").Array()
+	subjects.Length().Ge(1)
+	coreOnly.Value("jetstream").Object().Value("enabled").Boolean().IsFalse()
+
+	s.filledKvs("kv1")
+	time.Sleep(50 * time.Millisecond)
+	withKv := e.GET("/api/connection/"+connId+"/subjects").
+		WithQuery("core", "false").
+		WithQuery("jetstream", "true").
+		Expect().Status(http.StatusOK).JSON().Object()
+	kvNames := []string{}
+	for _, stream := range withKv.Value("jetstream").Object().Value("streams").Array().Iter() {
+		for _, sub := range stream.Object().Value("subjects").Array().Iter() {
+			kvNames = append(kvNames, sub.Object().Value("subject").String().Raw())
+		}
+	}
+	s.True(len(kvNames) > 0, "KV keys are user data and must remain visible")
+	for _, name := range kvNames {
+		if len(name) >= 4 && name[:4] == "$KV." {
+			return
+		}
+	}
+	s.Fail("expected a $KV. subject in the JetStream catalog")
+}
+
 func TestNuiTestSuite(t *testing.T) {
 	suite.Run(t, new(NuiTestSuite))
 }

@@ -1,0 +1,82 @@
+.root {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 4px 0 8px;
+}
+
+.node {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 6px;
+	border-radius: 5px;
+	cursor: pointer;
+}
+
+.node:hover {
+	background-color: rgba(0, 0, 0, .18);
+}
+
+.selected {
+	background-color: var(--cmp-select-bg);
+	color: var(--cmp-select-fg);
+}
+
+.twist {
+	width: 10px;
+	flex: 0 0 10px;
+	opacity: .7;
+	font-size: 10px;
+}
+
+.segment {
+	font-weight: 700;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.meta {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex: 0 0 auto;
+}
+
+.chip {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: .03em;
+	padding: 1px 5px;
+	border-radius: 4px;
+}
+
+.core {
+	background-color: rgba(16, 243, 243, .35);
+	color: #111;
+}
+
+.js {
+	background-color: rgba(235, 251, 53, .45);
+	color: #111;
+}
+
+.count {
+	font-size: 11px;
+	opacity: .75;
+}
+
+.empty {
+	white-space: normal;
+	line-height: 1.45;
+	padding: 8px 2px 12px;
+}
+
+.children {
+	margin-left: 10px;
+	border-left: 1px solid rgba(255, 255, 255, .12);
+	padding-left: 4px;
+}

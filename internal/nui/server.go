@@ -74,6 +74,9 @@ func (a *App) registerHandlers() {
 	a.Post("/api/connection/:id/messages/publish", a.HandlePublish)
 	a.Post("/api/connection/:id/request", a.HandleRequest)
 
+	a.Get("/api/connection/:id/subjects/last", a.HandleSubjectLast)
+	a.Get("/api/connection/:id/subjects", a.HandleSubjectsSnapshot)
+
 	a.Get("/api/connection/:connection_id/stream", a.HandleIndexStreams)
 	a.Get("/api/connection/:connection_id/stream/:stream_name", a.HandleShowStream)
 	a.Post("/api/connection/:connection_id/stream", a.HandleCreateStream)
