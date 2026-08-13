@@ -1,23 +1,25 @@
+export type SubjectKind = "live" | "pattern" | "occupied" | "kv" | "object"
+
 export interface CoreSubjectHit {
 	subject: string
 	count: number
-	lastPayload?: string
-	lastAt?: string
-	headers?: { [key: string]: string[] }
 }
 
 export interface JetStreamSubjectHit {
 	subject: string
-	count: number
+	pattern?: string
+	kind: "pattern" | "occupied" | "kv" | "object"
+	count?: number
 }
 
 export interface JetStreamStreamHit {
 	name: string
+	kind: "stream" | "kv" | "object"
+	truncated?: boolean
 	subjects: JetStreamSubjectHit[]
 }
 
-export interface CoreSnapshot {
-	enabled: boolean
+export interface CoreCatalog {
 	filter: string
 	listenMs: number
 	heard: number
@@ -27,24 +29,27 @@ export interface CoreSnapshot {
 	subjects: CoreSubjectHit[]
 }
 
-export interface JetStreamSnapshot {
-	enabled: boolean
+export interface JetStreamCatalog {
 	error?: string
 	failed?: number
 	truncated?: boolean
 	streams: JetStreamStreamHit[]
 }
 
-export interface SubjectsSnapshot {
-	capturedAt: string
-	core: CoreSnapshot
-	jetstream: JetStreamSnapshot
+export interface OccupiedCatalog {
+	stream: string
+	kind?: string
+	truncated?: boolean
+	error?: string
+	subjects: JetStreamSubjectHit[]
 }
 
 export interface SubjectHit {
 	subject: string
-	core?: { count: number, lastPayload?: string, lastAt?: string, headers?: { [key: string]: string[] } }
-	streams: { name: string, count: number }[]
+	kind?: SubjectKind
+	core?: { count: number }
+	streams: { name: string, kind?: string, count?: number, pattern?: string }[]
+	expandable?: boolean
 }
 
 export interface SubjectNode {
@@ -53,4 +58,5 @@ export interface SubjectNode {
 	children: SubjectNode[]
 	hit?: SubjectHit
 	names: number
+	remainder?: boolean
 }

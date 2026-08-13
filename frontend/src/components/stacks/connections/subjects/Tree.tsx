@@ -34,33 +34,43 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, d
 	const hasChildren = node.children.length > 0
 	const [open, setOpen] = useState(depth < 2)
 	const selected = !!node.hit && node.path == select
-	const clsNode = `${cls.node} ${selected ? cls.selected : ""}`
-	const title = node.hit
-		? leafTitle(node.path, node.hit.core?.count, node.hit.streams)
-		: node.path
+	const clsNode = `${cls.node} ${selected ? cls.selected : ""} ${node.remainder ? cls.remainder : ""}`
+	const title = node.remainder
+		? node.segment
+		: node.hit
+			? leafTitle(node.path, node.hit.core?.count, node.hit.streams)
+			: node.path
 
 	const handleTwist = (e: React.MouseEvent) => {
 		e.stopPropagation()
 		if (hasChildren) setOpen(!open)
 	}
 	const handleClick = () => {
+		if (node.remainder) return
 		if (node.hit) onSelect?.(node)
 		else if (hasChildren) setOpen(!open)
 	}
+
+	const kindChip = node.hit?.kind == "kv" ? "kv"
+		: node.hit?.kind == "object" ? "object"
+			: node.hit?.kind == "pattern" ? "pattern"
+				: null
 
 	return (
 		<div>
 			<div className={clsNode} onClick={handleClick} title={title}>
 				<div className={cls.twist} onClick={handleTwist}>
-					{hasChildren ? (open ? "▾" : "▸") : ""}
+					{hasChildren ? (open ? "▾" : "▸") : node.hit?.expandable ? "▸" : ""}
 				</div>
 				<div className={cls.segment}>{node.segment}</div>
 				<div className={cls.meta}>
 					{node.hit?.core && <span className={`${cls.chip} ${cls.core}`}>live</span>}
-					{node.hit?.streams.map(s => (
+					{kindChip && <span className={`${cls.chip} ${cls.js}`}>{kindChip}</span>}
+					{node.hit?.streams.filter(s => s.kind != "kv" && s.kind != "object").map(s => (
 						<span key={s.name} className={`${cls.chip} ${cls.js}`}>{s.name}</span>
 					))}
-					{!node.hit && node.names > 0 && <span className={cls.count}>{node.names}</span>}
+					{!node.hit && !node.remainder && node.names > 0 && <span className={cls.count}>{node.names}</span>}
+					{node.remainder && <span className={cls.count}>{node.names}</span>}
 				</div>
 			</div>
 			{hasChildren && open && (

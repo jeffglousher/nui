@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { SubjectHit, SubjectsSnapshot } from "@/types/Subject"
-import { buildSubjectTree, countLeaves, filterTree, flattenHits } from "./tree"
+import { SubjectHit } from "@/types/Subject"
+import { buildSubjectTree, countLeaves, filterTree, flattenHits, MAX_TREE_CHILDREN } from "./tree"
 
 function hit(subject: string, opts: Partial<SubjectHit> = {}): SubjectHit {
 	return { subject, streams: [], ...opts }
@@ -8,30 +8,30 @@ function hit(subject: string, opts: Partial<SubjectHit> = {}): SubjectHit {
 
 describe("flattenHits", () => {
 	it("merges the same name from core and a stream without adding their counts", () => {
-		const snapshot: SubjectsSnapshot = {
-			capturedAt: "2026-01-01T00:00:00Z",
+		const hits = flattenHits({
+			showCore: true,
+			showJetStream: true,
 			core: {
-				enabled: true, filter: ">", listenMs: 2000, heard: 1, truncated: false,
-				subjects: [{ subject: "orders.created", count: 2, lastPayload: "abc" }],
+				filter: "orders.>", listenMs: 2000, heard: 1, truncated: false,
+				subjects: [{ subject: "orders.created", count: 2 }],
 			},
 			jetstream: {
-				enabled: true,
-				streams: [{ name: "ORDERS", subjects: [{ subject: "orders.created", count: 40 }] }],
+				streams: [{ name: "ORDERS", kind: "stream", subjects: [{ subject: "orders.created", kind: "occupied", count: 40 }] }],
 			},
-		}
-		const hits = flattenHits(snapshot)
+		})
 		expect(hits).toHaveLength(1)
 		expect(hits[0].core?.count).toBe(2)
-		expect(hits[0].streams).toEqual([{ name: "ORDERS", count: 40 }])
+		expect(hits[0].streams).toEqual([{ name: "ORDERS", kind: "stream", pattern: undefined, count: 40 }])
 	})
 
-	it("ignores disabled sources", () => {
-		const snapshot: SubjectsSnapshot = {
-			capturedAt: "2026-01-01T00:00:00Z",
-			core: { enabled: false, filter: ">", listenMs: 2000, heard: 0, truncated: false, subjects: [{ subject: "x", count: 1 }] },
-			jetstream: { enabled: false, streams: [{ name: "S", subjects: [{ subject: "y", count: 1 }] }] },
-		}
-		expect(flattenHits(snapshot)).toEqual([])
+	it("hides a source when its toggle is off without refetching", () => {
+		const hits = flattenHits({
+			showCore: false,
+			showJetStream: false,
+			core: { filter: "x.>", listenMs: 2000, heard: 1, truncated: false, subjects: [{ subject: "x", count: 1 }] },
+			jetstream: { streams: [{ name: "S", kind: "stream", subjects: [{ subject: "y", kind: "pattern" }] }] },
+		})
+		expect(hits).toEqual([])
 	})
 })
 
@@ -50,11 +50,12 @@ describe("buildSubjectTree", () => {
 		expect(countLeaves(tree)).toBe(3)
 	})
 
-	it("inserts many siblings without losing any", () => {
-		const hits = Array.from({ length: 80 }, (_, i) => hit(`root.n${i.toString().padStart(2, "0")}`))
+	it("folds extra siblings into a remainder instead of rendering every token", () => {
+		const hits = Array.from({ length: MAX_TREE_CHILDREN + 12 }, (_, i) => hit(`root.n${i.toString().padStart(2, "0")}`))
 		const tree = buildSubjectTree(hits)
-		expect(tree[0].children).toHaveLength(80)
-		expect(tree[0].names).toBe(80)
+		expect(tree[0].children).toHaveLength(MAX_TREE_CHILDREN + 1)
+		expect(tree[0].children[MAX_TREE_CHILDREN].remainder).toBe(true)
+		expect(tree[0].children[MAX_TREE_CHILDREN].segment).toMatch(/12 more/)
 	})
 })
 

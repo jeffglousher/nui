@@ -1,7 +1,14 @@
-import { SubjectHit, SubjectNode, SubjectsSnapshot } from "@/types/Subject"
+import { CoreCatalog, JetStreamCatalog, OccupiedCatalog, SubjectHit, SubjectNode } from "@/types/Subject"
 
-export function flattenHits(snapshot: SubjectsSnapshot | null): SubjectHit[] {
-	if (!snapshot) return []
+export const MAX_TREE_CHILDREN = 50
+
+export function flattenHits(opts: {
+	core?: CoreCatalog | null
+	jetstream?: JetStreamCatalog | null
+	occupied?: Record<string, OccupiedCatalog>
+	showCore: boolean
+	showJetStream: boolean
+}): SubjectHit[] {
 	const bySubject = new Map<string, SubjectHit>()
 
 	const ensure = (subject: string): SubjectHit => {
@@ -13,23 +20,38 @@ export function flattenHits(snapshot: SubjectsSnapshot | null): SubjectHit[] {
 		return hit
 	}
 
-	if (snapshot.core?.enabled) {
-		for (const item of snapshot.core.subjects ?? []) {
+	if (opts.showCore && opts.core) {
+		for (const item of opts.core.subjects ?? []) {
 			const hit = ensure(item.subject)
-			hit.core = {
-				count: item.count,
-				lastPayload: item.lastPayload,
-				lastAt: item.lastAt,
-				headers: item.headers,
-			}
+			hit.core = { count: item.count }
+			if (!hit.kind) hit.kind = "live"
 		}
 	}
 
-	if (snapshot.jetstream?.enabled) {
-		for (const stream of snapshot.jetstream.streams ?? []) {
+	if (opts.showJetStream && opts.jetstream) {
+		for (const stream of opts.jetstream.streams ?? []) {
 			for (const item of stream.subjects ?? []) {
 				const hit = ensure(item.subject)
-				hit.streams.push({ name: stream.name, count: item.count })
+				hit.kind = item.kind
+				hit.expandable = item.kind == "pattern" || item.kind == "kv" || item.kind == "object"
+				hit.streams.push({
+					name: stream.name,
+					kind: stream.kind,
+					pattern: item.pattern,
+					count: item.count,
+				})
+			}
+		}
+		for (const occ of Object.values(opts.occupied ?? {})) {
+			for (const item of occ.subjects ?? []) {
+				const hit = ensure(item.subject)
+				if (!hit.kind || hit.kind == "live") hit.kind = "occupied"
+				if (!hit.streams.some(s => s.name == occ.stream)) {
+					hit.streams.push({ name: occ.stream, kind: occ.kind, count: item.count })
+				} else {
+					const row = hit.streams.find(s => s.name == occ.stream)
+					if (row) row.count = item.count
+				}
 			}
 		}
 	}
@@ -66,9 +88,22 @@ export function buildSubjectTree(hits: SubjectHit[]): SubjectNode[] {
 }
 
 function freeze(draft: Draft): SubjectNode {
-	const children = Array.from(draft.children.values())
+	const all = Array.from(draft.children.values())
 		.sort((a, b) => a.segment.localeCompare(b.segment))
 		.map(freeze)
+	const children = all.slice(0, MAX_TREE_CHILDREN)
+	if (all.length > MAX_TREE_CHILDREN) {
+		const hidden = all.slice(MAX_TREE_CHILDREN)
+		let hiddenNames = 0
+		for (const child of hidden) hiddenNames += child.names
+		children.push({
+			segment: `… ${hidden.length} more`,
+			path: draft.path ? `${draft.path}.__more` : "__more",
+			children: [],
+			names: hiddenNames,
+			remainder: true,
+		})
+	}
 	let names = draft.hit ? 1 : 0
 	for (const child of children) names += child.names
 	return {
@@ -84,6 +119,7 @@ export function filterTree(nodes: SubjectNode[], text: string): SubjectNode[] {
 	const needle = text?.toLocaleLowerCase()?.trim()
 	if (!needle) return nodes
 	const keep = (node: SubjectNode): SubjectNode | null => {
+		if (node.remainder) return null
 		const children = node.children.map(keep).filter(Boolean) as SubjectNode[]
 		const selfMatch = node.path.toLowerCase().includes(needle)
 			|| node.hit?.streams.some(s => s.name.toLowerCase().includes(needle))

@@ -1,29 +1,25 @@
 import { rest } from 'msw'
 
-const snapshot = {
-	captured_at: "2026-01-01T00:00:00Z",
-	core: {
-		enabled: true,
-		filter: ">",
-		listen_ms: 2000,
-		heard: 1,
-		truncated: false,
-		subjects: [
-			{ subject: "shop.orders.created", count: 2, last_payload: btoa("hello") },
-		],
-	},
-	jetstream: {
-		enabled: true,
-		streams: [
-			{
-				name: "ORDERS",
-				subjects: [
-					{ subject: "shop.orders.created", count: 12 },
-					{ subject: "shop.orders.shipped", count: 4 },
-				],
-			},
-		],
-	},
+const jetstream = {
+	streams: [
+		{
+			name: "ORDERS",
+			kind: "stream",
+			subjects: [
+				{ subject: "shop.orders", pattern: "shop.orders.>", kind: "pattern" },
+			],
+		},
+	],
+}
+
+const core = {
+	filter: "shop.>",
+	listen_ms: 2000,
+	heard: 1,
+	truncated: false,
+	subjects: [
+		{ subject: "shop.orders.created", count: 2 },
+	],
 }
 
 const handlers = [
@@ -38,8 +34,21 @@ const handlers = [
 			}),
 		)
 	}),
-	rest.get('/api/connection/:cnnId/subjects', async (req, res, ctx) => {
-		return res(ctx.status(200), ctx.json(snapshot))
+	rest.get('/api/connection/:cnnId/subjects/jetstream/:stream/occupied', async (req, res, ctx) => {
+		return res(ctx.status(200), ctx.json({
+			stream: req.params.stream,
+			kind: "stream",
+			subjects: [
+				{ subject: "shop.orders.created", kind: "occupied", count: 12 },
+				{ subject: "shop.orders.shipped", kind: "occupied", count: 4 },
+			],
+		}))
+	}),
+	rest.get('/api/connection/:cnnId/subjects/jetstream', async (req, res, ctx) => {
+		return res(ctx.status(200), ctx.json(jetstream))
+	}),
+	rest.get('/api/connection/:cnnId/subjects/core', async (req, res, ctx) => {
+		return res(ctx.status(200), ctx.json(core))
 	}),
 ]
 

@@ -69,6 +69,11 @@
 	opacity: .75;
 }
 
+.remainder {
+	opacity: .65;
+	cursor: default;
+}
+
 .empty {
 	white-space: normal;
 	line-height: 1.45;

@@ -1,26 +1,31 @@
 ## INDEX
 
-One discovery pass for a connection, then every subscription is released.
+Discovery is two requests. JetStream returns capture patterns immediately. Core listens only when you give it a real name, on its own connection, then unsubscribes. Neither response includes payloads.
 
-- **JetStream**: names already stored in streams.
-- **Core**: names heard while listening, then the listen stops. Core does not remember the past.
-
-### URL
+### JETSTREAM PATTERNS
 
 ```
-GET /api/connection/:id/subjects
+GET /api/connection/:id/subjects/jetstream
 ```
-
-### QUERY
 
 | name | default | meaning |
 |---|---|---|
-| `core` | `true` | listen, then unsubscribe |
-| `jetstream` | `true` | list stored stream subjects |
-| `listen_ms` | `2000` | core listen window (200–10000) |
-| `filter` | `>` | core subscribe filter |
 | `discard_sys` | `true` | hide `$SYS`, `$JS.`, `_INBOX` (not `$KV` / `$O`) |
 
-### RESPONSE
+`$KV` and `$O` collapse to one bucket node. Occupied names are a separate call.
 
-`core.subjects[].last_payload` is base64, capped. `dropped` is messages the listen could not keep. `truncated` means the name list was capped. `jetstream.failed` is streams that could not be read.
+### CORE LISTEN
+
+```
+GET /api/connection/:id/subjects/core?filter=orders.>&listen_ms=2000
+```
+
+`filter` is required. `>` and other catch-alls are rejected. Uses a short-lived connection, not the pooled MESSAGES connection.
+
+### OCCUPIED NAMES
+
+```
+GET /api/connection/:id/subjects/jetstream/:stream/occupied?filter=orders.>
+```
+
+Names that currently have messages in that stream, capped per stream.

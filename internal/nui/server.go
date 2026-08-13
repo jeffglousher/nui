@@ -75,7 +75,9 @@ func (a *App) registerHandlers() {
 	a.Post("/api/connection/:id/request", a.HandleRequest)
 
 	a.Get("/api/connection/:id/subjects/last", a.HandleSubjectLast)
-	a.Get("/api/connection/:id/subjects", a.HandleSubjectsSnapshot)
+	a.Get("/api/connection/:id/subjects/jetstream/:stream/occupied", a.HandleJetStreamOccupied)
+	a.Get("/api/connection/:id/subjects/jetstream", a.HandleJetStreamCatalog)
+	a.Get("/api/connection/:id/subjects/core", a.HandleCoreListen)
 
 	a.Get("/api/connection/:connection_id/stream", a.HandleIndexStreams)
 	a.Get("/api/connection/:connection_id/stream/:stream_name", a.HandleShowStream)
