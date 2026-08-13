@@ -125,7 +125,7 @@ const SubjectsView: FunctionComponent<Props> = ({
 			<TextInput
 				style={{ flex: 1 }}
 				value={textFind}
-				placeholder="narrow the list"
+				placeholder="type part of a name"
 				onChange={handleSearchChange}
 			/>
 		</div>

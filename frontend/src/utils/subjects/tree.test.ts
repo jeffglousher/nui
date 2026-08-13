@@ -37,6 +37,26 @@ describe("flattenHits", () => {
 		expect(hits).toEqual([])
 	})
 
+	it("keeps a kv store tag on occupied keys so they do not look like anonymous names", () => {
+		const hits = flattenHits({
+			showCore: false,
+			showJetStream: true,
+			jetstream: {
+				streams: [{ name: "KV_shop", kind: "kv", subjects: [{ subject: "$KV.shop", kind: "kv", pattern: "$KV.shop.>" }] }],
+			},
+			occupied: {
+				"KV_shop::$KV.shop.>": {
+					stream: "KV_shop", kind: "kv",
+					subjects: [{ subject: "$KV.shop.item-1", kind: "occupied", count: 1 }],
+				},
+			},
+		})
+		const key = hits.find(h => h.subject == "$KV.shop.item-1")
+		expect(key?.streams[0].kind).toBe("kv")
+		expect(key?.kind).toBe("occupied")
+		expect(key?.expandable).toBeFalsy()
+	})
+
 	it("hides a source when its toggle is off without refetching", () => {
 		const hits = flattenHits({
 			showCore: false,

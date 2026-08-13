@@ -86,8 +86,8 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, d
 		else if (hasChildren) setOpen(!open)
 	}
 
-	const kindChip = node.hit?.kind == "kv" ? "kv"
-		: node.hit?.kind == "object" ? "files"
+	const kindChip = (node.hit?.kind == "kv" || node.hit?.streams.some(s => s.kind == "kv")) ? "kv"
+		: (node.hit?.kind == "object" || node.hit?.streams.some(s => s.kind == "object")) ? "files"
 			: null
 
 	return (
@@ -106,7 +106,7 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, d
 					{loadingOcc && <span className={cls.count}>loading</span>}
 					{loadedEmpty && !occ?.error && <span className={cls.count}>none stored</span>}
 					{occ?.error && <span className={cls.count}>{occ.error}</span>}
-					{!node.hit && !node.remainder && node.names > 0 && <span className={cls.count}>{node.names}</span>}
+					{!node.hit && !node.remainder && node.names > 0 && !open && <span className={cls.count}>{node.names}</span>}
 					{node.remainder && <span className={cls.count}>{node.names}</span>}
 				</div>
 			</div>

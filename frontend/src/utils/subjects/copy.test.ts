@@ -7,6 +7,7 @@ describe("copy", () => {
 		expect(LEGEND[0]).toMatch(/name a message travels on/i)
 		expect(LEGEND[1]).toMatch(/forget/i)
 		expect(LEGEND[1]).toMatch(/store/i)
+		expect(LEGEND[1]).toMatch(/live/i)
 		expect(LEGEND[2]).toMatch(/orders\.>/)
 	})
 

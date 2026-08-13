@@ -3,8 +3,8 @@ import { FILTER_INVALID, FILTER_REQUIRED, FILTER_TOO_BROAD } from "./filter"
 
 export const LEGEND = [
 	"A subject is a name a message travels on, like orders.created.",
-	"Core is live and forgets. JetStream is a store that keeps messages.",
-	"To listen, type a prefix with a >, like orders.>, then click LISTEN.",
+	"Core is live and forgets. JetStream keeps messages. live means we just heard it. ORDERS or kv is the store that kept it.",
+	"Type a prefix with a >, like orders.>, then click LISTEN.",
 ]
 
 export function coreListenLabel(filter: string): string {

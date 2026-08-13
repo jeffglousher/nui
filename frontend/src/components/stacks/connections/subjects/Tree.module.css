@@ -16,7 +16,7 @@
 }
 
 .node:hover {
-	background-color: rgba(0, 0, 0, .18);
+	background-color: rgba(255, 255, 255, .08);
 }
 
 .selected {
@@ -92,7 +92,7 @@
 }
 
 .children {
-	margin-left: 10px;
-	border-left: 1px solid rgba(255, 255, 255, .12);
-	padding-left: 4px;
+	margin-left: 14px;
+	border-left: 2px solid rgba(255, 255, 255, .22);
+	padding-left: 8px;
 }
