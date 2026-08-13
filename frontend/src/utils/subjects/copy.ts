@@ -1,9 +1,9 @@
 import { CoreCatalog, JetStreamCatalog } from "@/types/Subject"
-import { FILTER_INVALID, FILTER_REQUIRED, FILTER_TOO_BROAD } from "./filter"
+import { FILTER_INVALID, FILTER_REQUIRED, FILTER_TOO_BROAD, canListen } from "./filter"
 
 export const LEGEND = [
 	"A subject is a name a message travels on, like orders.created.",
-	"Core is live and forgets. JetStream keeps messages. live means we just heard it. ORDERS or kv is the store that kept it.",
+	"Core is live and forgets. JetStream keeps messages. live means we just heard it. ORDERS or KV is the store that kept it.",
 	"Type a prefix with a >, like orders.>, then click LISTEN.",
 ]
 
@@ -62,7 +62,11 @@ export function coreStatus(enabled: boolean, core?: CoreCatalog | null, filter?:
 	if (core?.error == FILTER_TOO_BROAD) return "Listening to every name at once is too broad. Try something like orders.>"
 	if (core?.error == FILTER_INVALID) return "That is not a valid name. Use dots, like orders.created or orders.>"
 	if (core?.error) return `Core could not listen: ${core.error}.`
-	if (!core) return "Type a name to listen, like orders.>"
+	if (!core) {
+		const next = filter?.trim()
+		if (next && canListen(next)) return `Click LISTEN to sample ${next}.`
+		return "Type a name to listen, like orders.>"
+	}
 	const names = core.heard ?? core.subjects?.length ?? 0
 	const window = `${(core.listenMs / 1000).toFixed(1)}s`
 	let line = `Core heard ${names} name${names == 1 ? "" : "s"} in ${window}`

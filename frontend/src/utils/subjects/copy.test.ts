@@ -89,6 +89,11 @@ describe("copy", () => {
 		})).toMatch(/too broad/i)
 	})
 
+	it("asks you to click LISTEN when a name is already typed", () => {
+		expect(coreStatus(true, null, "orders.>")).toBe("Click LISTEN to sample orders.>.")
+		expect(coreStatus(true, null, "")).toMatch(/Type a name/)
+	})
+
 	it("hides leftover live names when the listen box changes", () => {
 		expect(coreListenStale({
 			filter: "orders.>", listenMs: 2000, heard: 1, truncated: false, subjects: [],

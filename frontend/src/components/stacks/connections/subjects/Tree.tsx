@@ -86,8 +86,8 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, d
 		else if (hasChildren) setOpen(!open)
 	}
 
-	const kindChip = (node.hit?.kind == "kv" || node.hit?.streams.some(s => s.kind == "kv")) ? "kv"
-		: (node.hit?.kind == "object" || node.hit?.streams.some(s => s.kind == "object")) ? "files"
+	const kindChip = (node.hit?.kind == "kv" || node.hit?.streams.some(s => s.kind == "kv")) ? "KV"
+		: (node.hit?.kind == "object" || node.hit?.streams.some(s => s.kind == "object")) ? "FILES"
 			: null
 
 	return (
@@ -99,7 +99,7 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, d
 				<div className={cls.segment}>{node.segment}</div>
 				<div className={cls.meta}>
 					{node.hit?.core && <span className={`${cls.chip} ${cls.core}`}>live</span>}
-					{kindChip && <span className={`${cls.chip} ${cls.js}`} title={kindChip == "kv" ? "key/value bucket" : "object store"}>{kindChip}</span>}
+					{kindChip && <span className={`${cls.chip} ${cls.js}`} title={kindChip == "KV" ? "key/value bucket" : "object store"}>{kindChip}</span>}
 					{node.hit?.streams.filter(s => s.kind != "kv" && s.kind != "object").map(s => (
 						<span key={s.name} className={`${cls.chip} ${cls.js}`} title={`kept by ${s.name}`}>{s.name}</span>
 					))}
