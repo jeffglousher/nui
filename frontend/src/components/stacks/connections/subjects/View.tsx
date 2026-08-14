@@ -7,6 +7,7 @@ import { SubjectNode } from "@/types/Subject"
 import { emptyCopy, listenHintCopy, statusLines } from "@/utils/subjects/copy"
 import { isCatchAll } from "@/utils/subjects/filter"
 import { buildSubjectTree, filterTree, flattenHits } from "@/utils/subjects/tree"
+import { watchFilter } from "@/utils/subjects/watch"
 import { Button, FindInputHeader, OptionsCmp, TextInput } from "@priolo/jack"
 import { useStore } from "@priolo/jon"
 import { FunctionComponent, useEffect, useMemo } from "react"
@@ -33,10 +34,15 @@ const SubjectsView: FunctionComponent<Props> = ({
 
 	const handleSelect = (node: SubjectNode) => {
 		if (node.remainder) return
-		if (node.hit) subjectsSo.openHit(node.hit)
+		if (node.hit?.expandable && node.hit.kind != "occupied") {
+			subjectsSo.openHit(node.hit)
+		}
 	}
-	const handleWatch = (subject: string) => {
-		subjectsSo.watch(subject)
+	const handleWatch = (node: SubjectNode) => {
+		if (node.remainder) return
+		const name = watchFilter(node)
+		if (!name) return
+		subjectsSo.watch(name).then(() => subjectsSo.setSelect(node.path))
 	}
 	const handleFilterChange = (value: string) => {
 		subjectsSo.setListenHint(null)

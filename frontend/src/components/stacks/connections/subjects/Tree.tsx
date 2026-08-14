@@ -1,10 +1,8 @@
-import PlayIcon from "@/icons/PlayIcon"
 import { OccupiedCatalog, SubjectNode } from "@/types/Subject"
 import { rowChip } from "@/utils/subjects/chip"
 import { leafTitle, subjectCopyValue } from "@/utils/subjects/copy"
 import { occupiedKey } from "@/utils/subjects/tree"
-import { watchFilter } from "@/utils/subjects/watch"
-import { CopyButton, IconButton, TooltipWrapCmp } from "@priolo/jack"
+import { CopyButton } from "@priolo/jack"
 import { FunctionComponent, memo, useState } from "react"
 import cls from "./Tree.module.css"
 
@@ -12,7 +10,7 @@ interface Props {
 	nodes: SubjectNode[]
 	select?: string
 	onSelect?: (node: SubjectNode) => void
-	onWatch?: (subject: string) => void
+	onWatch?: (node: SubjectNode) => void
 	empty?: string
 	occupied?: Record<string, OccupiedCatalog>
 	occupiedLoading?: string
@@ -53,7 +51,7 @@ interface NodeProps {
 	node: SubjectNode
 	select?: string
 	onSelect?: (node: SubjectNode) => void
-	onWatch?: (subject: string) => void
+	onWatch?: (node: SubjectNode) => void
 	occupied?: Record<string, OccupiedCatalog>
 	occupiedLoading?: string
 	reveal: boolean
@@ -86,39 +84,28 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({
 			: node.path
 	const chip = rowChip(node.hit, node.segment)
 	const copyValue = subjectCopyValue(node)
-	const watchValue = watchFilter(node)
 
-	const activate = () => {
+	const toggleOpen = () => {
+		if (node.remainder || !canOpen) return
+		const next = !open
+		if (!reveal) setOpen(node.path, next)
+		if (next && node.hit?.expandable && !occ && !loadingOcc) onSelect?.(node)
+	}
+
+	const watch = () => {
 		if (node.remainder) return
-		if (canOpen) {
-			const next = !open
-			if (!reveal) setOpen(node.path, next)
-			if (next && node.hit?.expandable && !occ && !loadingOcc) onSelect?.(node)
-			return
-		}
-		if (node.hit) onSelect?.(node)
+		onWatch?.(node)
 	}
 
 	return (
 		<div>
-			<div className={`${clsNode} jack-hover-container`} onClick={activate} title={title}>
-				<div className={cls.twist} onClick={e => { e.stopPropagation(); activate() }}>
+			<div className={`${clsNode} jack-hover-container`} onClick={watch} title={title}>
+				<div className={cls.twist} onClick={e => { e.stopPropagation(); toggleOpen() }}>
 					{canOpen ? (open ? "▾" : "▸") : ""}
 				</div>
 				<div className={cls.segment}>{node.segment}</div>
 				<div className={cls.meta}>
-					{(watchValue || copyValue) && (
-						<div className={`jack-hover-hide ${cls.actions}`} onClick={e => e.stopPropagation()}>
-							{watchValue && (
-								<TooltipWrapCmp content="WATCH IN MESSAGES">
-									<IconButton onClick={() => onWatch?.(watchValue)}>
-										<PlayIcon />
-									</IconButton>
-								</TooltipWrapCmp>
-							)}
-							{copyValue && <CopyButton value={copyValue} label="COPY SUBJECT" />}
-						</div>
-					)}
+					{copyValue && <CopyButton absolute value={copyValue} label="COPY SUBJECT" />}
 					{chip && <span className={`${cls.chip} ${chip.kind == "live" ? cls.core : cls.js}`} title={chip.title}>{chip.label}</span>}
 					{loadingOcc && <span className={cls.count}>loading</span>}
 					{loadedEmpty && !occ?.error && <span className={cls.count}>none stored</span>}

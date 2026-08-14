@@ -240,10 +240,16 @@ const setup = {
 				store.state.group.addLink({ view: msgSo, parent: store, anim: true })
 			}
 			await msgSo.fetchIfVoid()
-			msgSo.setSubscriptions(mergeWatch(msgSo.state.subscriptions, name))
-			if (msgSo.state.pause) msgSo.setPause(false)
-			msgSo.sendSubscriptions()
-			msgSo.updateSubscriptions()
+			const next = mergeWatch(msgSo.state.subscriptions, name)
+			const sameListen = listeningNames(msgSo.state.subscriptions) == listeningNames(next)
+			const wasPaused = msgSo.state.pause
+			msgSo.setSubscriptions(next)
+			if (wasPaused) msgSo.setPause(false)
+			if (!sameListen || wasPaused) {
+				msgSo.sendSubscriptions()
+				msgSo.updateSubscriptions()
+			}
+			store.state.group.focus?.(msgSo)
 		},
 	},
 
@@ -262,6 +268,14 @@ const setup = {
 		setSelect: (select: string) => ({ select }),
 		setFormat: (format: MSG_FORMAT) => ({ format }),
 	},
+}
+
+function listeningNames(subs: { subject?: string, disabled?: boolean }[] | null | undefined): string {
+	return (subs ?? [])
+		.filter(s => !!s?.subject && !s.disabled)
+		.map(s => s.subject)
+		.sort()
+		.join("\n")
 }
 
 function findMessages(store: SubjectsStore): MessagesStore | null {
