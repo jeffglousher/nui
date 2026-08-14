@@ -24,6 +24,12 @@ FIND and reload sit in the header, same as STREAMS. CORE / JETSTREAM are view fi
 
 `ALL` / `>` is how you look around. Type `orders.>` to narrow. Busy lists are capped.
 
+## Demo
+
+STREAMS is a table of keepers. MESSAGES is a live log. SUBJECTS is a catalog of names.
+
+On `demo.nats.io` the card opens as a closed family list. Open `ghost` for stacked live children (`bd.gga`). Open `cox` for `dealer` and `inventory.details`. FIND `gga` reveals the path. The love GIF on the pull request walks that comparison, then the tree.
+
 ## What this card will not do
 
 - It will not open the whole tree for you.
