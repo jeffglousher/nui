@@ -151,6 +151,11 @@ const SubjectsView: FunctionComponent<Props> = ({
 					occupied={subjectsSa.occupied}
 					occupiedLoading={subjectsSa.occupiedLoading}
 					reveal={!!subjectsSa.textSearch?.trim()}
+					openPaths={subjectsSa.openPaths}
+					setOpen={(path, open) => subjectsSo.setOpenPaths({
+						...subjectsSo.state.openPaths,
+						[path]: open,
+					})}
 				/>
 			</div>
 		}

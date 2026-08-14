@@ -197,8 +197,7 @@ const setup = {
 			}
 			const last = store.state.messages[store.state.messages.length - 1]
 			if (last && isListenStatus(last) && last.subject == msgChangeSubj.subject && last.payload == msgChangeSubj.payload) return
-			const msgs = [...store.state.messages]
-			if (last && isListenStatus(last)) msgs.pop()
+			const msgs = store.state.messages.filter(m => !isListenStatus(m))
 			msgs.push(msgChangeSubj)
 			store.setMessages(msgs)
 		},

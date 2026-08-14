@@ -28,6 +28,10 @@
 	color: var(--cmp-select-fg);
 }
 
+.selected :global(.jack-hover-hide) {
+	display: flex;
+}
+
 .twist {
 	width: 22px;
 	height: 22px;

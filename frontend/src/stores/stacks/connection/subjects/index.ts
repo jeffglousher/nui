@@ -36,6 +36,7 @@ const setup = {
 
 		textSearch: <string>null,
 		select: <string>null,
+		openPaths: <Record<string, boolean>>{},
 
 		format: MSG_FORMAT.JSON,
 
@@ -244,12 +245,15 @@ const setup = {
 			msgSo.setSubscriptions(next)
 			msgSo.setSubscriptionsOpen(false)
 			if (wasPaused) msgSo.setPause(false)
+			if (!sameListen) {
+				msgSo.setMessages([])
+				msgSo.setTextSearch(null)
+			}
 			if (opened) {
 				store.state.group.addLink({ view: msgSo, parent: store, anim: true })
 			} else if (!sameListen || wasPaused) {
 				msgSo.sendSubscriptions()
 			}
-			store.state.group.focus?.(msgSo)
 		},
 	},
 
@@ -266,6 +270,7 @@ const setup = {
 		setCoreListening: (coreListening: boolean) => ({ coreListening }),
 		setTextSearch: (textSearch: string) => ({ textSearch }),
 		setSelect: (select: string) => ({ select }),
+		setOpenPaths: (openPaths: Record<string, boolean>) => ({ openPaths }),
 		setFormat: (format: MSG_FORMAT) => ({ format }),
 	},
 }

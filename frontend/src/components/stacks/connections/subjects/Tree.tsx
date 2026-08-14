@@ -3,7 +3,7 @@ import { rowChip } from "@/utils/subjects/chip"
 import { leafTitle, subjectCopyValue } from "@/utils/subjects/copy"
 import { occupiedKey } from "@/utils/subjects/tree"
 import { CopyButton } from "@priolo/jack"
-import { FunctionComponent, memo, useState } from "react"
+import { FunctionComponent, memo } from "react"
 import cls from "./Tree.module.css"
 
 interface Props {
@@ -15,17 +15,20 @@ interface Props {
 	occupied?: Record<string, OccupiedCatalog>
 	occupiedLoading?: string
 	reveal?: boolean
+	openPaths?: Record<string, boolean>
+	setOpen?: (path: string, open: boolean) => void
 }
 
 const SubjectTree: FunctionComponent<Props> = ({
-	nodes, select, onSelect, onWatch, empty, occupied, occupiedLoading, reveal,
+	nodes, select, onSelect, onWatch, empty, occupied, occupiedLoading, reveal, openPaths, setOpen,
 }) => {
-	const [openPaths, setOpenPaths] = useState<Record<string, boolean>>({})
 	if (!nodes || nodes.length == 0) {
 		return <div className={`jack-lbl-empty color-fg ${cls.empty}`}>{empty ?? "No names to show."}</div>
 	}
-	const setOpen = (path: string, open: boolean) => {
-		setOpenPaths(prev => (prev[path] == open ? prev : { ...prev, [path]: open }))
+	const paths = openPaths ?? {}
+	const setPath = (path: string, open: boolean) => {
+		if (paths[path] == open) return
+		setOpen?.(path, open)
 	}
 	return <div className={cls.root}>
 		{nodes.map(node => (
@@ -38,8 +41,8 @@ const SubjectTree: FunctionComponent<Props> = ({
 				occupied={occupied}
 				occupiedLoading={occupiedLoading}
 				reveal={!!reveal}
-				openPaths={openPaths}
-				setOpen={setOpen}
+				openPaths={paths}
+				setOpen={setPath}
 			/>
 		))}
 	</div>
