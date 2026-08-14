@@ -36,8 +36,8 @@ const setup = {
 
 		format: MSG_FORMAT.JSON,
 
-		width: 440,
-		widthMax: 900,
+		width: 350,
+		widthMax: 800,
 	},
 
 	getters: {
@@ -74,7 +74,6 @@ const setup = {
 
 		async fetch(_: void, store?: LoadBaseStore) {
 			const s = <SubjectsStore>store
-			s.setOccupied({})
 			s.setListenHint(null)
 			await s.discover("refresh")
 			await loadBaseSetup.actions.fetch(_, store)
@@ -94,7 +93,7 @@ const setup = {
 		},
 
 		async fetchJetStream(_: void, store?: SubjectsStore) {
-			const catalog = await subjectsApi.jetstream(store.state.connectionId, { store, noError: true })
+			const catalog = await subjectsApi.jetstream(store.state.connectionId, { store, manageAbort: true, noError: true })
 			if (!catalog) return
 			if (!Array.isArray(catalog.streams)) {
 				store.setJetstream({ streams: [], error: catalog.error || "could not be read" })

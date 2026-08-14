@@ -1,0 +1,72 @@
+# Windows desktop build for the fork prerelease.
+# Same steps as nats-nui release-semver.yml's windows-amd64 job:
+# windows-2022 + wails-build-action + WebView2 embed + NSIS.
+# Go is 1.25 (go.mod). Official workflow still pins 1.21; Wails cannot
+# load this module with an older host toolchain.
+name: prerelease windows
+
+on:
+  push:
+    branches:
+      - cursor/cbor-subjects-prerelease-e94c
+  workflow_dispatch:
+
+env:
+  NODE_OPTIONS: "--max-old-space-size=4096"
+  RELEASE_TAG: v0.9.3-cbor-subjects.1
+
+jobs:
+  windows-amd64:
+    runs-on: windows-2022
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build wails
+        uses: ./.github/actions/wails-build-action
+        id: build
+        with:
+          app-version: ${{ env.RELEASE_TAG }}
+          build-name: nui-app
+          build-platform: windows/amd64
+          wails-build-webview2: embed
+          package: false
+          go-version: "1.25"
+          nsis: true
+
+      - name: rename artifacts windows
+        shell: bash
+        run: |
+          mv build/bin/nui-app.exe build/bin/windows-amd64-nui-app.exe || mv build/bin/nui-app build/bin/windows-amd64-nui-app.exe
+          mv build/bin/nui-app-amd64-installer.exe build/bin/windows-amd64-nui-app-installer.exe
+          (cd build/bin && sha256sum windows-amd64-nui-app.exe windows-amd64-nui-app-installer.exe > windows-amd64-nui-app.sha256)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nui-Windows-windows-amd64-${{ github.run_id }}
+          path: |
+            build/bin/
+
+      - name: Replace prerelease assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release delete-asset "${RELEASE_TAG}" windows-amd64-nui-app.exe --yes || true
+          gh release delete-asset "${RELEASE_TAG}" windows-amd64-nui-app.exe.sha256 --yes || true
+          gh release delete-asset "${RELEASE_TAG}" windows-amd64-nui-app-installer.exe --yes || true
+          gh release delete-asset "${RELEASE_TAG}" windows-amd64-nui-app.sha256 --yes || true
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          prerelease: true
+          files: |
+            build/bin/windows-amd64-nui-app.exe
+            build/bin/windows-amd64-nui-app-installer.exe
+            build/bin/windows-amd64-nui-app.sha256
