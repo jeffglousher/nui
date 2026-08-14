@@ -35,6 +35,9 @@ const SubjectsView: FunctionComponent<Props> = ({
 		if (node.remainder) return
 		if (node.hit) subjectsSo.openHit(node.hit)
 	}
+	const handleWatch = (subject: string) => {
+		subjectsSo.watch(subject)
+	}
 	const handleFilterChange = (value: string) => {
 		subjectsSo.setListenHint(null)
 		subjectsSo.setFilter(value)
@@ -136,6 +139,7 @@ const SubjectsView: FunctionComponent<Props> = ({
 					nodes={tree}
 					select={subjectsSa.select}
 					onSelect={handleSelect}
+					onWatch={handleWatch}
 					empty={empty}
 					occupied={subjectsSa.occupied}
 					occupiedLoading={subjectsSa.occupiedLoading}

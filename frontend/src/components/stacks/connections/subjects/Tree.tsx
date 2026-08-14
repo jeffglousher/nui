@@ -1,8 +1,10 @@
+import PlayIcon from "@/icons/PlayIcon"
 import { OccupiedCatalog, SubjectNode } from "@/types/Subject"
 import { rowChip } from "@/utils/subjects/chip"
 import { leafTitle, subjectCopyValue } from "@/utils/subjects/copy"
 import { occupiedKey } from "@/utils/subjects/tree"
-import { CopyButton } from "@priolo/jack"
+import { watchFilter } from "@/utils/subjects/watch"
+import { CopyButton, IconButton, TooltipWrapCmp } from "@priolo/jack"
 import { FunctionComponent, memo, useState } from "react"
 import cls from "./Tree.module.css"
 
@@ -10,6 +12,7 @@ interface Props {
 	nodes: SubjectNode[]
 	select?: string
 	onSelect?: (node: SubjectNode) => void
+	onWatch?: (subject: string) => void
 	empty?: string
 	occupied?: Record<string, OccupiedCatalog>
 	occupiedLoading?: string
@@ -17,7 +20,7 @@ interface Props {
 }
 
 const SubjectTree: FunctionComponent<Props> = ({
-	nodes, select, onSelect, empty, occupied, occupiedLoading, reveal,
+	nodes, select, onSelect, onWatch, empty, occupied, occupiedLoading, reveal,
 }) => {
 	const [openPaths, setOpenPaths] = useState<Record<string, boolean>>({})
 	if (!nodes || nodes.length == 0) {
@@ -33,6 +36,7 @@ const SubjectTree: FunctionComponent<Props> = ({
 				node={node}
 				select={select}
 				onSelect={onSelect}
+				onWatch={onWatch}
 				occupied={occupied}
 				occupiedLoading={occupiedLoading}
 				reveal={!!reveal}
@@ -49,6 +53,7 @@ interface NodeProps {
 	node: SubjectNode
 	select?: string
 	onSelect?: (node: SubjectNode) => void
+	onWatch?: (subject: string) => void
 	occupied?: Record<string, OccupiedCatalog>
 	occupiedLoading?: string
 	reveal: boolean
@@ -63,7 +68,7 @@ function occKeyFor(node: SubjectNode): string | null {
 }
 
 const TreeNode: FunctionComponent<NodeProps> = memo(({
-	node, select, onSelect, occupied, occupiedLoading, reveal, openPaths, setOpen,
+	node, select, onSelect, onWatch, occupied, occupiedLoading, reveal, openPaths, setOpen,
 }) => {
 	const hasChildren = node.children.length > 0
 	const open = reveal || !!openPaths[node.path]
@@ -81,6 +86,7 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({
 			: node.path
 	const chip = rowChip(node.hit, node.segment)
 	const copyValue = subjectCopyValue(node)
+	const watchValue = watchFilter(node)
 
 	const activate = () => {
 		if (node.remainder) return
@@ -101,7 +107,18 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({
 				</div>
 				<div className={cls.segment}>{node.segment}</div>
 				<div className={cls.meta}>
-					{copyValue && <CopyButton absolute value={copyValue} label="COPY SUBJECT" />}
+					{(watchValue || copyValue) && (
+						<div className={`jack-hover-hide ${cls.actions}`} onClick={e => e.stopPropagation()}>
+							{watchValue && (
+								<TooltipWrapCmp content="WATCH IN MESSAGES">
+									<IconButton onClick={() => onWatch?.(watchValue)}>
+										<PlayIcon />
+									</IconButton>
+								</TooltipWrapCmp>
+							)}
+							{copyValue && <CopyButton value={copyValue} label="COPY SUBJECT" />}
+						</div>
+					)}
 					{chip && <span className={`${cls.chip} ${chip.kind == "live" ? cls.core : cls.js}`} title={chip.title}>{chip.label}</span>}
 					{loadingOcc && <span className={cls.count}>loading</span>}
 					{loadedEmpty && !occ?.error && <span className={cls.count}>none stored</span>}
@@ -118,6 +135,7 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({
 							node={child}
 							select={select}
 							onSelect={onSelect}
+							onWatch={onWatch}
 							occupied={occupied}
 							occupiedLoading={occupiedLoading}
 							reveal={reveal}

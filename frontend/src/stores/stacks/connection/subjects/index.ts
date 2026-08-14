@@ -1,6 +1,6 @@
 import subjectsApi from "@/api/subjects"
 import cnnSo from "@/stores/connections"
-import { buildMessageDetail } from "@/stores/docs/utils/factory"
+import { buildMessageDetail, buildStore } from "@/stores/docs/utils/factory"
 import viewSetup, { ViewStore } from "@/stores/stacks/viewBase"
 import { DOC_TYPE } from "@/types"
 import { OccupiedCatalog, SubjectHit, CoreCatalog, JetStreamCatalog } from "@/types/Subject"
@@ -8,9 +8,12 @@ import { MSG_FORMAT } from "@/utils/editor"
 import { canListen, normalizeListenFilter, validateListenFilter } from "@/utils/subjects/filter"
 import { shouldFetchCore, shouldFetchJetStream, DiscoverReason } from "@/utils/subjects/fetch"
 import { occupiedKey } from "@/utils/subjects/tree"
+import { mergeWatch } from "@/utils/subjects/watch"
+import { docsSo, utils } from "@priolo/jack"
 import { mixStores } from "@priolo/jon"
 import loadBaseSetup, { LoadBaseState, LoadBaseStore } from "../../loadBase"
 import { MessageStore } from "../../message"
+import { MessagesState, MessagesStore } from "../messages"
 import { ViewState } from "../../viewBase"
 
 const setup = {
@@ -222,6 +225,26 @@ const setup = {
 			}
 			store._update()
 		},
+
+		async watch(subject: string, store?: SubjectsStore) {
+			const name = subject?.trim()
+			if (!name) return
+			store.setSelect(name)
+			let msgSo = findMessages(store)
+			if (!msgSo) {
+				msgSo = buildStore({
+					type: DOC_TYPE.MESSAGES,
+					connectionId: store.state.connectionId,
+				} as MessagesState) as MessagesStore
+				if (!msgSo) return
+				store.state.group.addLink({ view: msgSo, parent: store, anim: true })
+			}
+			await msgSo.fetchIfVoid()
+			msgSo.setSubscriptions(mergeWatch(msgSo.state.subscriptions, name))
+			if (msgSo.state.pause) msgSo.setPause(false)
+			msgSo.sendSubscriptions()
+			msgSo.updateSubscriptions()
+		},
 	},
 
 	mutators: {
@@ -239,6 +262,17 @@ const setup = {
 		setSelect: (select: string) => ({ select }),
 		setFormat: (format: MSG_FORMAT) => ({ format }),
 	},
+}
+
+function findMessages(store: SubjectsStore): MessagesStore | null {
+	const linked = store.state.linked as MessagesStore
+	if (linked?.state.type == DOC_TYPE.MESSAGES && linked.state.connectionId == store.state.connectionId) {
+		return linked
+	}
+	return (utils.findAll(docsSo.getAllCards(), {
+		type: DOC_TYPE.MESSAGES,
+		connectionId: store.state.connectionId,
+	})?.[0] as MessagesStore) ?? null
 }
 
 export type SubjectsState = typeof setup.state & ViewState & LoadBaseState

@@ -12,7 +12,7 @@ Open a family and you get **one more level**. A normal name stays one child (`or
 
 Open a name with a ▸ (a JetStream pattern, KV bucket, or object store). Stored names load **under that row**, still stacked if they are deep. Click a stored name to see the last message JetStream kept. Core has no last message — `live` means we heard it during a listen.
 
-FIND and reload sit in the header, same as STREAMS. CORE / JETSTREAM are view filters in the card, not header actions. FIND opens matching families so the leaf is visible. Reload and poll sample again. Open folders stay open. Hover a row to copy the full name, same control as MESSAGES. Names use the same monospace 12px as the STREAMS table. A chip appears only when it adds a fact (`live`, `KV`, `FILES`, or a stream whose name is not the row). The footer stays quiet unless something failed or was capped.
+FIND and reload sit in the header, same as STREAMS. CORE / JETSTREAM are view filters in the card, not header actions. FIND opens matching families so the leaf is visible. Reload and poll sample again. Open folders stay open. Hover a row to copy the full name or watch it in MESSAGES — that uses the same saved subject list MESSAGES already has. Names use the same monospace 12px as the STREAMS table. A chip appears only when it adds a fact (`live`, `KV`, `FILES`, or a stream whose name is not the row). The footer stays quiet unless something failed or was capped.
 
 ## Core vs JetStream
 
@@ -36,6 +36,7 @@ On `demo.nats.io` the card opens as a closed family list. Open `ghost` for stack
 - It will not treat a catch-all as a mistake.
 - It will not show payloads in the catalog. Last message is a separate click.
 - It will not invent MQTT, KV, or Object as a third mode. Those are JetStream stores with a small chip.
+- It will not keep its own watch list. That is the MESSAGES subject list.
 
 ## API
 

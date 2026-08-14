@@ -58,6 +58,16 @@
 	min-width: 0;
 }
 
+.actions {
+	position: absolute;
+	top: -2px;
+	right: 4px;
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	z-index: 1;
+}
+
 .chip {
 	font: inherit;
 	padding: 0 4px;
