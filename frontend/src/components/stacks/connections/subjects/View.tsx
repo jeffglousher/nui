@@ -42,7 +42,8 @@ const SubjectsView: FunctionComponent<Props> = ({
 		if (node.remainder) return
 		const name = watchFilter(node)
 		if (!name) return
-		subjectsSo.watch(name).then(() => subjectsSo.setSelect(node.path))
+		subjectsSo.setSelect(node.path)
+		subjectsSo.watch(name)
 	}
 	const handleFilterChange = (value: string) => {
 		subjectsSo.setListenHint(null)

@@ -8,7 +8,7 @@ import { MSG_FORMAT } from "@/utils/editor"
 import { canListen, normalizeListenFilter, validateListenFilter } from "@/utils/subjects/filter"
 import { shouldFetchCore, shouldFetchJetStream, DiscoverReason } from "@/utils/subjects/fetch"
 import { occupiedKey } from "@/utils/subjects/tree"
-import { mergeWatch } from "@/utils/subjects/watch"
+import { focusWatch } from "@/utils/subjects/watch"
 import { docsSo, utils } from "@priolo/jack"
 import { mixStores } from "@priolo/jon"
 import loadBaseSetup, { LoadBaseState, LoadBaseStore } from "../../loadBase"
@@ -200,7 +200,6 @@ const setup = {
 		},
 
 		async openHit(hit: SubjectHit, store?: SubjectsStore) {
-			store.setSelect(hit.subject)
 			if (hit.expandable && hit.kind != "occupied") {
 				await store.loadOccupied(hit)
 				return
@@ -229,25 +228,26 @@ const setup = {
 		async watch(subject: string, store?: SubjectsStore) {
 			const name = subject?.trim()
 			if (!name) return
-			store.setSelect(name)
 			let msgSo = findMessages(store)
+			const opened = !msgSo
 			if (!msgSo) {
 				msgSo = buildStore({
 					type: DOC_TYPE.MESSAGES,
 					connectionId: store.state.connectionId,
 				} as MessagesState) as MessagesStore
 				if (!msgSo) return
-				store.state.group.addLink({ view: msgSo, parent: store, anim: true })
 			}
 			await msgSo.fetchIfVoid()
-			const next = mergeWatch(msgSo.state.subscriptions, name)
+			const next = focusWatch(msgSo.state.subscriptions, name)
 			const sameListen = listeningNames(msgSo.state.subscriptions) == listeningNames(next)
 			const wasPaused = msgSo.state.pause
 			msgSo.setSubscriptions(next)
+			msgSo.setSubscriptionsOpen(false)
 			if (wasPaused) msgSo.setPause(false)
-			if (!sameListen || wasPaused) {
+			if (opened) {
+				store.state.group.addLink({ view: msgSo, parent: store, anim: true })
+			} else if (!sameListen || wasPaused) {
 				msgSo.sendSubscriptions()
-				msgSo.updateSubscriptions()
 			}
 			store.state.group.focus?.(msgSo)
 		},

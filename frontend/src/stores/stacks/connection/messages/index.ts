@@ -19,6 +19,14 @@ import { SS_EVENTS } from "@/plugins/SocketService"
 
 const MaxMessagesLength = 20000
 
+function isListenStatus(m: Message) {
+	return !!m.type && (
+		m.subject == "LISTENING ON SUBJECTS"
+		|| m.subject == "NO SUBJECTS"
+		|| m.subject == "IN PAUSE"
+	)
+}
+
 export type MessageStat = {
 	subject: string,
 	counter: number,
@@ -187,7 +195,12 @@ const setup = {
 				payload: subjWS.join(", "),
 				receivedAt: Date.now(),
 			}
-			store.setMessages([...store.state.messages, msgChangeSubj])
+			const last = store.state.messages[store.state.messages.length - 1]
+			if (last && isListenStatus(last) && last.subject == msgChangeSubj.subject && last.payload == msgChangeSubj.payload) return
+			const msgs = [...store.state.messages]
+			if (last && isListenStatus(last)) msgs.pop()
+			msgs.push(msgChangeSubj)
+			store.setMessages(msgs)
 		},
 		/** invio al REST nel caso ci siano nuovi preferiti */
 		updateSubscriptions: (_: void, store?: MessagesStore) => {

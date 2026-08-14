@@ -29,15 +29,21 @@
 }
 
 .twist {
-	width: 16px;
-	height: 16px;
-	flex: 0 0 16px;
+	width: 22px;
+	height: 22px;
+	flex: 0 0 22px;
 	opacity: .9;
 	font-family: sans-serif;
 	font-size: 12px;
-	line-height: 16px;
+	line-height: 22px;
 	text-align: center;
 	cursor: pointer;
+}
+
+.twistPad {
+	width: 22px;
+	height: 22px;
+	flex: 0 0 22px;
 }
 
 .segment {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { mergeWatch, watchFilter } from "./watch"
+import { focusWatch, watchFilter } from "./watch"
 
 describe("watchFilter", () => {
 	it("watches a live or stored name as itself", () => {
@@ -26,25 +26,46 @@ describe("watchFilter", () => {
 	})
 })
 
-describe("mergeWatch", () => {
-	it("adds a name to the MESSAGES list and keeps it", () => {
-		expect(mergeWatch([], "orders.created")).toEqual([
+describe("focusWatch", () => {
+	it("watches only the name you clicked", () => {
+		expect(focusWatch([
 			{ subject: "orders.created", disabled: false, favorite: true },
+			{ subject: "returns.>", disabled: false, favorite: true },
+		], "ghost.>")).toEqual([
+			{ subject: "orders.created", disabled: true, favorite: true },
+			{ subject: "returns.>", disabled: true, favorite: true },
+			{ subject: "ghost.>", disabled: false, favorite: false },
 		])
 	})
 
-	it("reuses an existing row instead of adding a second", () => {
-		expect(mergeWatch([
+	it("does not grow a second row for the same name", () => {
+		expect(focusWatch([
 			{ subject: "orders.created", disabled: true, favorite: false },
 			{ subject: "returns.>", disabled: false, favorite: true },
 		], "orders.created")).toEqual([
-			{ subject: "orders.created", disabled: false, favorite: true },
-			{ subject: "returns.>", disabled: false, favorite: true },
+			{ subject: "orders.created", disabled: false, favorite: false },
+			{ subject: "returns.>", disabled: true, favorite: true },
+		])
+	})
+
+	it("does not pin a catalog click as a saved favorite", () => {
+		expect(focusWatch([], "orders.created")).toEqual([
+			{ subject: "orders.created", disabled: false, favorite: false },
+		])
+	})
+
+	it("drops earlier catalog clicks that were never saved", () => {
+		expect(focusWatch([
+			{ subject: "orders.created", disabled: false, favorite: false },
+			{ subject: "returns.>", disabled: true, favorite: true },
+		], "ghost.>")).toEqual([
+			{ subject: "returns.>", disabled: true, favorite: true },
+			{ subject: "ghost.>", disabled: false, favorite: false },
 		])
 	})
 
 	it("ignores a blank name", () => {
-		expect(mergeWatch([{ subject: "orders.created" }], "  ")).toEqual([
+		expect(focusWatch([{ subject: "orders.created" }], "  ")).toEqual([
 			{ subject: "orders.created" },
 		])
 	})

@@ -70,7 +70,7 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({
 }) => {
 	const hasChildren = node.children.length > 0
 	const open = reveal || !!openPaths[node.path]
-	const selected = !!node.hit && node.path == select
+	const selected = !node.remainder && !!select && node.path == select
 	const key = occKeyFor(node)
 	const occ = key ? occupied?.[key] : undefined
 	const loadingOcc = !!key && occupiedLoading == key
@@ -100,12 +100,20 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({
 	return (
 		<div>
 			<div className={`${clsNode} jack-hover-container`} onClick={watch} title={title}>
-				<div className={cls.twist} onClick={e => { e.stopPropagation(); toggleOpen() }}>
-					{canOpen ? (open ? "▾" : "▸") : ""}
-				</div>
+				{canOpen ? (
+					<div className={cls.twist} title="Open" onClick={e => { e.stopPropagation(); toggleOpen() }}>
+						{open ? "▾" : "▸"}
+					</div>
+				) : (
+					<div className={cls.twistPad} />
+				)}
 				<div className={cls.segment}>{node.segment}</div>
 				<div className={cls.meta}>
-					{copyValue && <CopyButton absolute value={copyValue} label="COPY SUBJECT" />}
+					{copyValue && (
+						<span onClick={e => e.stopPropagation()}>
+							<CopyButton absolute value={copyValue} label="COPY SUBJECT" />
+						</span>
+					)}
 					{chip && <span className={`${cls.chip} ${chip.kind == "live" ? cls.core : cls.js}`} title={chip.title}>{chip.label}</span>}
 					{loadingOcc && <span className={cls.count}>loading</span>}
 					{loadedEmpty && !occ?.error && <span className={cls.count}>none stored</span>}

@@ -17,15 +17,15 @@ export function watchFilter(node: {
 	return `${node.path}.>`
 }
 
-export function mergeWatch(subs: Subscription[] | null | undefined, subject: string): Subscription[] {
+export function focusWatch(subs: Subscription[] | null | undefined, subject: string): Subscription[] {
 	const name = subject?.trim()
 	if (!name) return [...(subs ?? [])]
-	const list = (subs ?? []).map(s => ({ ...s }))
-	const existing = list.find(s => s.subject == name)
-	if (existing) {
-		existing.disabled = false
-		existing.favorite = true
-		return list
-	}
-	return [...list, { subject: name, disabled: false, favorite: true }]
+	const kept = (subs ?? [])
+		.filter(s => !!s?.subject && (s.favorite || s.subject == name))
+		.map(s => ({
+			...s,
+			disabled: s.subject != name,
+		}))
+	if (kept.some(s => s.subject == name)) return kept
+	return [...kept, { subject: name, disabled: false, favorite: false }]
 }
