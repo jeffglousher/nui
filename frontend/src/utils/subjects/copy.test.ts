@@ -135,9 +135,13 @@ describe("copy", () => {
 		}, "devices.>")).toMatch(/LISTEN to sample devices\.>/)
 	})
 
-	it("copies the full name from a row, not a leftover stack count", () => {
+	it("copies the name a click would watch, not a leftover stack count", () => {
 		expect(subjectCopyValue({ path: "orders.created", hit: { subject: "orders.created" } })).toBe("orders.created")
-		expect(subjectCopyValue({ path: "orders" })).toBe("orders")
+		expect(subjectCopyValue({ path: "orders" })).toBe("orders.>")
+		expect(subjectCopyValue({
+			path: "foo",
+			hit: { subject: "foo", kind: "pattern", streams: [{ pattern: "foo.>" }] },
+		})).toBe("foo.>")
 		expect(subjectCopyValue({ path: "orders.created", remainder: true })).toBeNull()
 	})
 

@@ -7,9 +7,21 @@ describe("watchFilter", () => {
 		expect(watchFilter({ path: "orders.created", hit: { subject: "orders.created", kind: "occupied" } })).toBe("orders.created")
 	})
 
-	it("watches a stream pattern as itself", () => {
+	it("watches a stream pattern as the name that stream actually captures", () => {
 		expect(watchFilter({ path: "orders.>", hit: { subject: "orders.>", kind: "pattern" } })).toBe("orders.>")
-		expect(watchFilter({ path: "orders", hit: { subject: "orders", kind: "pattern" } })).toBe("orders")
+		expect(watchFilter({
+			path: "foo",
+			hit: { subject: "foo", kind: "pattern", expandable: true, streams: [{ pattern: "foo.>" }] },
+		})).toBe("foo.>")
+		expect(watchFilter({ path: "orders", hit: { subject: "orders", kind: "pattern" } })).toBe("orders.>")
+	})
+
+	it("watches a family folder as that prefix, even if the token itself was heard", () => {
+		expect(watchFilter({
+			path: "agents",
+			children: [{}],
+			hit: { subject: "agents", kind: "live" },
+		})).toBe("agents.>")
 	})
 
 	it("watches a KV or object bucket as that family", () => {
