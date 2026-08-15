@@ -36,6 +36,14 @@ function pendingOf(store: MessagesStore): pendingBuf {
 	return buf
 }
 
+function dropPending(store: MessagesStore) {
+	const buf = pendingByCard.get(store.state.uuid)
+	if (!buf) return
+	if (buf.timer) clearTimeout(buf.timer)
+	buf.timer = null
+	buf.messages = []
+}
+
 function flushMessages(store: MessagesStore) {
 	const buf = pendingByCard.get(store.state.uuid)
 	if (!buf) return
@@ -160,10 +168,16 @@ const setup = {
 			store.sendSubscriptions()
 		},
 		disconnect(_: void, store?: MessagesStore) {
-			flushMessages(store)
+			dropPending(store)
 			pendingByCard.delete(store.state.uuid)
 			socketPool.getById(store.getSocketServiceId())?.emitter.off(MSG_TYPE.NATS_MESSAGE, null)
 			socketPool.destroy(store.getSocketServiceId())
+		},
+
+		/** empty the live tail without a late 50ms flush putting rows back */
+		clearMessages(_: void, store?: MessagesStore) {
+			dropPending(store)
+			store.setMessages([])
 		},
 
 		/** aggiungo un messaggio di questa CARD */

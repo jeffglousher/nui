@@ -55,7 +55,7 @@ const MessagesView: FunctionComponent<Props> = ({
 		}
 	}
 	const hendleMessageClick = (message: Message) => msgSo.openMessageDetail(message)
-	const handleClear = () => msgSo.setMessages([])
+	const handleClear = () => msgSo.clearMessages()
 	const handleSearchChange = (value: string) => {
 		setTextFind(value)
 		debounce(`text-find-${msgSa.uuid}`, () => msgSo.setTextSearch(value), 2000)

@@ -65,14 +65,18 @@ go run ./scripts/repro-memory -cmd=flood -rate=5000 -size=64 -subjects=20000 -du
 go run ./scripts/repro-memory -cmd=listen -subject='flood.>' -duration=30s
 ```
 
-Measured through `/ws/sub` on the running NUI (old binary, local nats-server :4222, not demo.nats.io):
+Measured on a NUI **built from this branch** (local nats-server :4222, not demo.nats.io):
 
-- ~1.1k msg/s relayed (publisher ~1.3–1.7k msg/s)
-- 12s same-subject flood: 12.7k messages, 5.7MiB websocket, NUI RSS **flat** at ~57MiB
-- 12s 20k-distinct-name flood: 11.4k messages, RSS +1.7MiB
-- `--db-path` value log **unchanged**
+| | old binary (DefaultOptions) | this branch |
+|---|---|---|
+| RSS at idle | ~57MiB | ~25MiB |
+| `--db-path` while running | `ls` 2.0G vlog + 128MiB mem | `ls` 16MiB vlog + 4MiB mem |
+| leftover 2GiB vlog after crash | stays 2GiB until Close | `NewDocStore` reclaims to 16MiB while open |
+| `/ws/sub` flood ~1.1k msg/s | RSS flat, vlog unchanged | RSS 25→30MiB, vlog unchanged |
+| Chrome MESSAGES on `flood.>` (20k names, 15s) | (not re-run) | heap 46→89→76MiB, `stats` **capped at 2000**, log localStorage unchanged |
+| Chrome same-subject 20s | | heap ~70MiB, tail 7845 / cap 8000 |
 
-The Go process is not the high-rate heap. The browser is: `addMessage` used to copy the whole array on every message, `stats` grew one entry per distinct subject, and `try_connecting` filled the in-app log. Open MESSAGES on `local-flood` and listen on `flood.>` while flooding to watch Chrome.
+The Go process is not the high-rate heap. The browser is. Open MESSAGES on `local-flood` and listen on `flood.>` while flooding to watch Chrome. Clearing the list now drops the 50ms pending batch so a late flush cannot put rows back.
 
 Open MESSAGES on the `local-flood` connection and listen on `flood.>` to watch
 the Chrome heap. The 20k-row cap still copies; the 50ms batch is what keeps
