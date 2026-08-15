@@ -14,15 +14,43 @@ import { MessageStore } from "../../message"
 import { ViewState } from "../../viewBase"
 import { buildConnectionMessageSend } from "../utils/factory"
 import { SS_EVENTS } from "@/plugins/SocketService"
+import { appendMessages, recordStat } from "./retain"
 
+export type { MessageStat } from "./retain"
 
+const FLUSH_MS = 50
 
-const MaxMessagesLength = 20000
+type pendingBuf = {
+	messages: Message[]
+	timer: ReturnType<typeof setTimeout> | null
+}
+const pendingByCard = new Map<string, pendingBuf>()
 
-export type MessageStat = {
-	subject: string,
-	counter: number,
-	last: number,
+function pendingOf(store: MessagesStore): pendingBuf {
+	const id = store.state.uuid
+	let buf = pendingByCard.get(id)
+	if (!buf) {
+		buf = { messages: [], timer: null }
+		pendingByCard.set(id, buf)
+	}
+	return buf
+}
+
+function flushMessages(store: MessagesStore) {
+	const buf = pendingByCard.get(store.state.uuid)
+	if (!buf) return
+	buf.timer = null
+	const batch = buf.messages
+	buf.messages = []
+	if (batch.length === 0) return
+	const msgs = appendMessages(store.state.messages, batch)
+	store.setMessages(msgs)
+	const linked = store.state.linked as MessageStore
+	if (!!linked && linked?.state.type == DOC_TYPE.MESSAGE && linked.state.linkToLast) {
+		throttle(`msg-last-${store.state.uuid}`, () => {
+			linked.setMessage(msgs[msgs.length - 1])
+		}, 1000)
+	}
 }
 
 const setup = {
@@ -132,6 +160,8 @@ const setup = {
 			store.sendSubscriptions()
 		},
 		disconnect(_: void, store?: MessagesStore) {
+			flushMessages(store)
+			pendingByCard.delete(store.state.uuid)
 			socketPool.getById(store.getSocketServiceId())?.emitter.off(MSG_TYPE.NATS_MESSAGE, null)
 			socketPool.destroy(store.getSocketServiceId())
 		},
@@ -148,30 +178,17 @@ const setup = {
 				payload: msg.payload as string,
 				receivedAt: Date.now(),
 			}
-			const i = store.state.messages.length > MaxMessagesLength ? 5000 : 0
-			const msgs = store.state.messages.slice(i)
-			msgs.push(message)
-			store.setMessages(msgs)
+			store.setStats(recordStat(store.state.stats, msg.subject, dayjs().valueOf()))
 
-			let sbjCounter = store.state.stats[msg.subject]
-			if (!sbjCounter) {
-				sbjCounter = { subject: msg.subject, counter: 0, last: 0 }
-				store.state.stats[msg.subject] = sbjCounter
-			}
-			sbjCounter.counter++;
-			sbjCounter.last = dayjs().valueOf()
-
-			// se ho un link del dettaglio MESSAGE e questo vuole sempre l'ultimo allora lo cambio
-			const linked = store.state.linked as MessageStore
-			if ( !!linked && linked?.state.type == DOC_TYPE.MESSAGE && linked.state.linkToLast ) {
-				throttle(`msg-last-${store.state.uuid}`, () => {
-					const lastMessage = msgs[msgs.length - 1]
-					linked.setMessage(lastMessage)
-				}, 1000)
+			const buf = pendingOf(store)
+			buf.messages.push(message)
+			if (!buf.timer) {
+				buf.timer = setTimeout(() => flushMessages(store), FLUSH_MS)
 			}
 		},
 		/** aggiorno i subjects di questo stack messages */
 		sendSubscriptions: (_: void, store?: MessagesStore) => {
+			flushMessages(store)
 			// invio il cambio di subs al web-socket
 			const subjWS = store.state.pause
 				? []

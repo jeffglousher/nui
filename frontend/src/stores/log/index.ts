@@ -4,6 +4,9 @@ import { Log, MESSAGE_TYPE } from "./utils"
 
 
 
+/** hard cap on in-app log entries kept in memory over a long session */
+const MaxLogsLength = 5000
+
 const setup = {
 
 	state: {
@@ -27,7 +30,8 @@ const setup = {
 					body: log.body,
 				})
 			}
-			store.setAll([...store.state.all, log])
+			const next = [...store.state.all, log]
+			store.setAll(next.length > MaxLogsLength ? next.slice(next.length - MaxLogsLength) : next)
 		},
 		addError(error: Error, store?: LogStore) {
 			if (!error) return

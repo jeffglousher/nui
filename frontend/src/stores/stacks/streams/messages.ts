@@ -19,6 +19,9 @@ import { MSG_FORMAT } from "@/utils/editor"
 
 let globalInterval = 50
 
+/** hard cap on stream messages held in memory; paging trims the off-screen side */
+const MaxStreamMessagesLength = 20000
+
 const setup = {
 
 	state: {
@@ -167,7 +170,8 @@ const setup = {
 			// ADD
 			let all = store.state.messages ?? []
 			if (pre) {
-				store.setMessages(msgs.concat(all))
+				const merged = msgs.concat(all)
+				store.setMessages(merged.length > MaxStreamMessagesLength ? merged.slice(0, MaxStreamMessagesLength) : merged)
 			} else {
 				// se ho un link del dettaglio MESSAGE e questo vuole sempre l'ultimo allora lo cambio
 				const linked = store.state.linked as MessageStore
@@ -175,7 +179,8 @@ const setup = {
 					const msg = msgs[msgs.length - 1]
 					debounce(`str-last-${store.state.uuid}`, () => linked.setMessage(msg), 300)
 				}
-				store.setMessages(all.concat(msgs))
+				const merged = all.concat(msgs)
+				store.setMessages(merged.length > MaxStreamMessagesLength ? merged.slice(merged.length - MaxStreamMessagesLength) : merged)
 			}
 			return msgs.length
 		},

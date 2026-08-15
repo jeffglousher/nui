@@ -4,11 +4,13 @@ import { SocketService } from "."
 export interface ReconnectOptions {
 	delay?: number,
 	tryMax?: number,
+	maxDelay?: number,
 }
 
 const optionsDefault = {
 	delay: 3000,
 	tryMax: 3,
+	maxDelay: 30000,
 }
 
 /**
@@ -31,7 +33,12 @@ export class Reconnect {
 		if ( !this.enabled ) return
 		this.stop()
 		this.tryUp()
-		this.idTimer = setTimeout(() => this.server.connect(), this.options.delay)
+		const shift = Math.min(Math.max(this.try - 1, 0), 4)
+		const delay = Math.min(
+			(this.options.delay ?? 3000) * Math.pow(2, shift),
+			this.options.maxDelay ?? 30000,
+		)
+		this.idTimer = setTimeout(() => this.server.connect(), delay)
 	}
 
 	stop() {
