@@ -9,6 +9,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestDocStore_InMemoryOpens(t *testing.T) {
+	db, err := NewDocStore(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+
+	doc := document.NewDocument()
+	doc.Set("name", "mem")
+	id, err := db.InsertOne(CONN_COLLECTION, doc)
+	require.NoError(t, err)
+	got, err := db.FindById(CONN_COLLECTION, id)
+	require.NoError(t, err)
+	require.Equal(t, "mem", got.Get("name"))
+}
+
 func TestDocStore_OnDiskFootprintStaysSmallWhileOpen(t *testing.T) {
 	dir := t.TempDir()
 	db, err := NewDocStore(dir)

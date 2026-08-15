@@ -29,10 +29,13 @@ type DB struct {
 }
 
 func NewDocStore(path string) (*DB, error) {
-	opts := nuiBadgerOptions(path)
 	if path == "" || path == ":memory:" {
-		return openClover(opts.WithInMemory(true))
+		// Dir/ValueDir must be empty in InMemory mode. Passing ":memory:"
+		// as the path (the old DefaultOptions habit) makes Badger refuse
+		// to open: "Cannot use badger in Disk-less mode with Dir set".
+		return openClover(nuiBadgerOptions("").WithInMemory(true))
 	}
+	opts := nuiBadgerOptions(path)
 	if err := reclaimOversizedValueLogs(path, opts); err != nil {
 		return nil, err
 	}
