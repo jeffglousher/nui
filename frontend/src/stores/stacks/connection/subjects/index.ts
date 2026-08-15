@@ -36,8 +36,8 @@ const setup = {
 
 		format: MSG_FORMAT.JSON,
 
-		width: 440,
-		widthMax: 900,
+		width: 350,
+		widthMax: 800,
 	},
 
 	getters: {
@@ -74,7 +74,6 @@ const setup = {
 
 		async fetch(_: void, store?: LoadBaseStore) {
 			const s = <SubjectsStore>store
-			s.setOccupied({})
 			s.setListenHint(null)
 			await s.discover("refresh")
 			await loadBaseSetup.actions.fetch(_, store)
