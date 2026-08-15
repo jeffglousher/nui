@@ -7,6 +7,7 @@ import { SubjectNode } from "@/types/Subject"
 import { emptyCopy, listenHintCopy, statusLines } from "@/utils/subjects/copy"
 import { isCatchAll } from "@/utils/subjects/filter"
 import { buildSubjectTree, filterTree, flattenHits } from "@/utils/subjects/tree"
+import { watchFilter } from "@/utils/subjects/watch"
 import { Button, FindInputHeader, OptionsCmp, TextInput } from "@priolo/jack"
 import { useStore } from "@priolo/jon"
 import { FunctionComponent, useEffect, useMemo } from "react"
@@ -33,7 +34,16 @@ const SubjectsView: FunctionComponent<Props> = ({
 
 	const handleSelect = (node: SubjectNode) => {
 		if (node.remainder) return
-		if (node.hit) subjectsSo.openHit(node.hit)
+		if (node.hit?.expandable && node.hit.kind != "occupied") {
+			subjectsSo.openHit(node.hit)
+		}
+	}
+	const handleWatch = (node: SubjectNode) => {
+		if (node.remainder) return
+		const name = watchFilter(node)
+		if (!name) return
+		subjectsSo.setSelect(node.path)
+		subjectsSo.watch(name)
 	}
 	const handleFilterChange = (value: string) => {
 		subjectsSo.setListenHint(null)
@@ -136,10 +146,16 @@ const SubjectsView: FunctionComponent<Props> = ({
 					nodes={tree}
 					select={subjectsSa.select}
 					onSelect={handleSelect}
+					onWatch={handleWatch}
 					empty={empty}
 					occupied={subjectsSa.occupied}
 					occupiedLoading={subjectsSa.occupiedLoading}
 					reveal={!!subjectsSa.textSearch?.trim()}
+					openPaths={subjectsSa.openPaths}
+					setOpen={(path, open) => subjectsSo.setOpenPaths({
+						...subjectsSo.state.openPaths,
+						[path]: open,
+					})}
 				/>
 			</div>
 		}

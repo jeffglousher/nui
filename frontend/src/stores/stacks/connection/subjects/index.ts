@@ -1,6 +1,6 @@
 import subjectsApi from "@/api/subjects"
 import cnnSo from "@/stores/connections"
-import { buildMessageDetail } from "@/stores/docs/utils/factory"
+import { buildMessageDetail, buildStore } from "@/stores/docs/utils/factory"
 import viewSetup, { ViewStore } from "@/stores/stacks/viewBase"
 import { DOC_TYPE } from "@/types"
 import { OccupiedCatalog, SubjectHit, CoreCatalog, JetStreamCatalog } from "@/types/Subject"
@@ -8,9 +8,12 @@ import { MSG_FORMAT } from "@/utils/editor"
 import { canListen, normalizeListenFilter, validateListenFilter } from "@/utils/subjects/filter"
 import { shouldFetchCore, shouldFetchJetStream, DiscoverReason } from "@/utils/subjects/fetch"
 import { occupiedKey } from "@/utils/subjects/tree"
+import { focusWatch } from "@/utils/subjects/watch"
+import { docsSo, utils } from "@priolo/jack"
 import { mixStores } from "@priolo/jon"
 import loadBaseSetup, { LoadBaseState, LoadBaseStore } from "../../loadBase"
 import { MessageStore } from "../../message"
+import { MessagesState, MessagesStore } from "../messages"
 import { ViewState } from "../../viewBase"
 
 const setup = {
@@ -33,6 +36,7 @@ const setup = {
 
 		textSearch: <string>null,
 		select: <string>null,
+		openPaths: <Record<string, boolean>>{},
 
 		format: MSG_FORMAT.JSON,
 
@@ -197,7 +201,6 @@ const setup = {
 		},
 
 		async openHit(hit: SubjectHit, store?: SubjectsStore) {
-			store.setSelect(hit.subject)
 			if (hit.expandable && hit.kind != "occupied") {
 				await store.loadOccupied(hit)
 				return
@@ -222,6 +225,36 @@ const setup = {
 			}
 			store._update()
 		},
+
+		async watch(subject: string, store?: SubjectsStore) {
+			const name = subject?.trim()
+			if (!name) return
+			let msgSo = findMessages(store)
+			const opened = !msgSo
+			if (!msgSo) {
+				msgSo = buildStore({
+					type: DOC_TYPE.MESSAGES,
+					connectionId: store.state.connectionId,
+				} as MessagesState) as MessagesStore
+				if (!msgSo) return
+			}
+			await msgSo.fetchIfVoid()
+			const next = focusWatch(msgSo.state.subscriptions, name)
+			const sameListen = listeningNames(msgSo.state.subscriptions) == listeningNames(next)
+			const wasPaused = msgSo.state.pause
+			msgSo.setSubscriptions(next)
+			msgSo.setSubscriptionsOpen(false)
+			if (wasPaused) msgSo.setPause(false)
+			if (!sameListen) {
+				msgSo.setMessages([])
+				msgSo.setTextSearch(null)
+			}
+			if (opened) {
+				store.state.group.addLink({ view: msgSo, parent: store, anim: true })
+			} else if (!sameListen || wasPaused) {
+				msgSo.sendSubscriptions()
+			}
+		},
 	},
 
 	mutators: {
@@ -237,8 +270,28 @@ const setup = {
 		setCoreListening: (coreListening: boolean) => ({ coreListening }),
 		setTextSearch: (textSearch: string) => ({ textSearch }),
 		setSelect: (select: string) => ({ select }),
+		setOpenPaths: (openPaths: Record<string, boolean>) => ({ openPaths }),
 		setFormat: (format: MSG_FORMAT) => ({ format }),
 	},
+}
+
+function listeningNames(subs: { subject?: string, disabled?: boolean }[] | null | undefined): string {
+	return (subs ?? [])
+		.filter(s => !!s?.subject && !s.disabled)
+		.map(s => s.subject)
+		.sort()
+		.join("\n")
+}
+
+function findMessages(store: SubjectsStore): MessagesStore | null {
+	const linked = store.state.linked as MessagesStore
+	if (linked?.state.type == DOC_TYPE.MESSAGES && linked.state.connectionId == store.state.connectionId) {
+		return linked
+	}
+	return (utils.findAll(docsSo.getAllCards(), {
+		type: DOC_TYPE.MESSAGES,
+		connectionId: store.state.connectionId,
+	})?.[0] as MessagesStore) ?? null
 }
 
 export type SubjectsState = typeof setup.state & ViewState & LoadBaseState

@@ -57,6 +57,22 @@ describe("flattenHits", () => {
 		expect(key?.expandable).toBeFalsy()
 	})
 
+	it("only opens a folder on a family capture, not an exact stream name", () => {
+		const hits = flattenHits({
+			showCore: false,
+			showJetStream: true,
+			jetstream: {
+				streams: [
+					{ name: "close", kind: "stream", subjects: [{ subject: "close", kind: "pattern", pattern: "close" }] },
+					{ name: "chaz", kind: "stream", subjects: [{ subject: "foo", kind: "pattern", pattern: "foo.>" }] },
+					{ name: "test_stream", kind: "stream", subjects: [{ subject: "foo", kind: "pattern", pattern: "foo" }] },
+				],
+			},
+		})
+		expect(hits.find(h => h.subject == "close")?.expandable).toBeFalsy()
+		expect(hits.find(h => h.subject == "foo")?.expandable).toBe(true)
+	})
+
 	it("hides a source when its toggle is off without refetching", () => {
 		const hits = flattenHits({
 			showCore: false,
@@ -97,6 +113,19 @@ describe("buildSubjectTree", () => {
 		expect(tree[1].children.map(c => c.segment)).toEqual(["sensors.humidity", "sensors.temp"])
 		expect(tree[1].children.every(c => c.stacked)).toBe(true)
 		expect(countLeaves(tree)).toBe(3)
+	})
+
+	it("does not turn a live prefix into a third hallway", () => {
+		const tree = buildSubjectTree([
+			hit("foo.bar", { kind: "live", core: { count: 4 } }),
+			hit("foo.bar.bar2", { kind: "live", core: { count: 1 } }),
+			hit("foo.a", { kind: "live", core: { count: 1 } }),
+			hit("foo.a.abc", { kind: "live", core: { count: 1 } }),
+		])
+		const foo = tree.find(n => n.segment == "foo")
+		expect(foo?.children.map(c => c.segment)).toEqual(["a", "a.abc", "bar", "bar.bar2"])
+		expect(foo?.children.every(c => c.children.length == 0)).toBe(true)
+		expect(foo?.children.filter(c => c.stacked).map(c => c.segment)).toEqual(["a.abc", "bar.bar2"])
 	})
 
 	it("nests stored names under the folder you opened instead of dumping siblings", () => {

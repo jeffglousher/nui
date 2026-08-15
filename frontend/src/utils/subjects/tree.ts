@@ -1,4 +1,5 @@
 import { CoreCatalog, JetStreamCatalog, OccupiedCatalog, SubjectHit, SubjectNode } from "@/types/Subject"
+import { isFamilyCapture } from "./watch"
 
 export const MAX_TREE_CHILDREN = 50
 // Family at the first token. Anything deeper is one stacked name, not a
@@ -45,7 +46,7 @@ export function flattenHits(opts: {
 			for (const item of stream.subjects ?? []) {
 				const hit = ensure(item.subject)
 				hit.kind = item.kind
-				hit.expandable = item.kind == "pattern" || item.kind == "kv" || item.kind == "object"
+				if (isFamilyCapture(item.kind, item.pattern)) hit.expandable = true
 				hit.streams.push({
 					name: stream.name,
 					kind: stream.kind,
@@ -91,9 +92,10 @@ export function buildSubjectTree(hits: SubjectHit[]): SubjectNode[] {
 		while (i < segments.length) {
 			const remaining = segments.length - i
 			const existing = current.children.get(segments[i])
-			// Prefer an existing folder (the bucket or pattern you opened)
-			// so stored names nest under it instead of dumping as siblings.
-			const stacked = i >= MAX_TREE_DEPTH - 1 && remaining > 1 && !existing
+			// Nest under a bucket or pattern you opened. A live prefix
+			// (foo.bar plus foo.bar.x) must not grow a third hallway.
+			const nestUnderOpen = !!existing?.hit?.expandable
+			const stacked = i >= MAX_TREE_DEPTH - 1 && remaining > 1 && !nestUnderOpen
 			const take = stacked ? remaining : 1
 			const segment = segments.slice(i, i + take).join(".")
 			const path = segments.slice(0, i + take).join(".")

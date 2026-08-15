@@ -1,5 +1,6 @@
 import { CoreCatalog, JetStreamCatalog } from "@/types/Subject"
 import { FILTER_INVALID, FILTER_REQUIRED, FILTER_TOO_BROAD, canListen, normalizeListenFilter } from "./filter"
+import { watchFilter } from "./watch"
 
 export const LEGEND = [
 	"A subject is a name a message travels on. Core is live and forgets. JetStream keeps messages.",
@@ -133,9 +134,13 @@ export function emptyCopy(args: {
 	return "No stored names. Open a name with a ▸ to see what a stream kept."
 }
 
-export function subjectCopyValue(node: { path: string, remainder?: boolean, hit?: { subject: string } }): string | null {
-	if (node.remainder) return null
-	return node.hit?.subject || node.path || null
+export function subjectCopyValue(node: {
+	path: string
+	remainder?: boolean
+	children?: unknown[]
+	hit?: { subject: string, kind?: string, expandable?: boolean, streams?: { pattern?: string }[] }
+}): string | null {
+	return watchFilter(node)
 }
 
 export function leafTitle(path: string, heard?: number, streams?: { name: string, count?: number }[]): string {

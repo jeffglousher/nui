@@ -3,28 +3,32 @@ import { rowChip } from "@/utils/subjects/chip"
 import { leafTitle, subjectCopyValue } from "@/utils/subjects/copy"
 import { occupiedKey } from "@/utils/subjects/tree"
 import { CopyButton } from "@priolo/jack"
-import { FunctionComponent, memo, useState } from "react"
+import { FunctionComponent, memo } from "react"
 import cls from "./Tree.module.css"
 
 interface Props {
 	nodes: SubjectNode[]
 	select?: string
 	onSelect?: (node: SubjectNode) => void
+	onWatch?: (node: SubjectNode) => void
 	empty?: string
 	occupied?: Record<string, OccupiedCatalog>
 	occupiedLoading?: string
 	reveal?: boolean
+	openPaths?: Record<string, boolean>
+	setOpen?: (path: string, open: boolean) => void
 }
 
 const SubjectTree: FunctionComponent<Props> = ({
-	nodes, select, onSelect, empty, occupied, occupiedLoading, reveal,
+	nodes, select, onSelect, onWatch, empty, occupied, occupiedLoading, reveal, openPaths, setOpen,
 }) => {
-	const [openPaths, setOpenPaths] = useState<Record<string, boolean>>({})
 	if (!nodes || nodes.length == 0) {
 		return <div className={`jack-lbl-empty color-fg ${cls.empty}`}>{empty ?? "No names to show."}</div>
 	}
-	const setOpen = (path: string, open: boolean) => {
-		setOpenPaths(prev => (prev[path] == open ? prev : { ...prev, [path]: open }))
+	const paths = openPaths ?? {}
+	const setPath = (path: string, open: boolean) => {
+		if (paths[path] == open) return
+		setOpen?.(path, open)
 	}
 	return <div className={cls.root}>
 		{nodes.map(node => (
@@ -33,11 +37,12 @@ const SubjectTree: FunctionComponent<Props> = ({
 				node={node}
 				select={select}
 				onSelect={onSelect}
+				onWatch={onWatch}
 				occupied={occupied}
 				occupiedLoading={occupiedLoading}
 				reveal={!!reveal}
-				openPaths={openPaths}
-				setOpen={setOpen}
+				openPaths={paths}
+				setOpen={setPath}
 			/>
 		))}
 	</div>
@@ -49,6 +54,7 @@ interface NodeProps {
 	node: SubjectNode
 	select?: string
 	onSelect?: (node: SubjectNode) => void
+	onWatch?: (node: SubjectNode) => void
 	occupied?: Record<string, OccupiedCatalog>
 	occupiedLoading?: string
 	reveal: boolean
@@ -63,11 +69,11 @@ function occKeyFor(node: SubjectNode): string | null {
 }
 
 const TreeNode: FunctionComponent<NodeProps> = memo(({
-	node, select, onSelect, occupied, occupiedLoading, reveal, openPaths, setOpen,
+	node, select, onSelect, onWatch, occupied, occupiedLoading, reveal, openPaths, setOpen,
 }) => {
 	const hasChildren = node.children.length > 0
 	const open = reveal || !!openPaths[node.path]
-	const selected = !!node.hit && node.path == select
+	const selected = !node.remainder && !!select && node.path == select
 	const key = occKeyFor(node)
 	const occ = key ? occupied?.[key] : undefined
 	const loadingOcc = !!key && occupiedLoading == key
@@ -82,26 +88,35 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({
 	const chip = rowChip(node.hit, node.segment)
 	const copyValue = subjectCopyValue(node)
 
-	const activate = () => {
+	const toggleOpen = () => {
+		if (node.remainder || !canOpen) return
+		const next = !open
+		if (!reveal) setOpen(node.path, next)
+		if (next && node.hit?.expandable && !occ && !loadingOcc) onSelect?.(node)
+	}
+
+	const watch = () => {
 		if (node.remainder) return
-		if (canOpen) {
-			const next = !open
-			if (!reveal) setOpen(node.path, next)
-			if (next && node.hit?.expandable && !occ && !loadingOcc) onSelect?.(node)
-			return
-		}
-		if (node.hit) onSelect?.(node)
+		onWatch?.(node)
 	}
 
 	return (
 		<div>
-			<div className={`${clsNode} jack-hover-container`} onClick={activate} title={title}>
-				<div className={cls.twist} onClick={e => { e.stopPropagation(); activate() }}>
-					{canOpen ? (open ? "▾" : "▸") : ""}
-				</div>
+			<div className={`${clsNode} jack-hover-container`} onClick={watch} title={title}>
+				{canOpen ? (
+					<div className={cls.twist} title="Open" onClick={e => { e.stopPropagation(); toggleOpen() }}>
+						{open ? "▾" : "▸"}
+					</div>
+				) : (
+					<div className={cls.twistPad} />
+				)}
 				<div className={cls.segment}>{node.segment}</div>
 				<div className={cls.meta}>
-					{copyValue && <CopyButton absolute value={copyValue} label="COPY SUBJECT" />}
+					{copyValue && (
+						<span onClick={e => e.stopPropagation()}>
+							<CopyButton absolute value={copyValue} label="COPY SUBJECT" />
+						</span>
+					)}
 					{chip && <span className={`${cls.chip} ${chip.kind == "live" ? cls.core : cls.js}`} title={chip.title}>{chip.label}</span>}
 					{loadingOcc && <span className={cls.count}>loading</span>}
 					{loadedEmpty && !occ?.error && <span className={cls.count}>none stored</span>}
@@ -118,6 +133,7 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({
 							node={child}
 							select={select}
 							onSelect={onSelect}
+							onWatch={onWatch}
 							occupied={occupied}
 							occupiedLoading={occupiedLoading}
 							reveal={reveal}
