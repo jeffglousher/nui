@@ -99,6 +99,19 @@ describe("buildSubjectTree", () => {
 		expect(countLeaves(tree)).toBe(3)
 	})
 
+	it("does not turn a live prefix into a third hallway", () => {
+		const tree = buildSubjectTree([
+			hit("foo.bar", { kind: "live", core: { count: 4 } }),
+			hit("foo.bar.bar2", { kind: "live", core: { count: 1 } }),
+			hit("foo.a", { kind: "live", core: { count: 1 } }),
+			hit("foo.a.abc", { kind: "live", core: { count: 1 } }),
+		])
+		const foo = tree.find(n => n.segment == "foo")
+		expect(foo?.children.map(c => c.segment)).toEqual(["a", "a.abc", "bar", "bar.bar2"])
+		expect(foo?.children.every(c => c.children.length == 0)).toBe(true)
+		expect(foo?.children.filter(c => c.stacked).map(c => c.segment)).toEqual(["a.abc", "bar.bar2"])
+	})
+
 	it("nests stored names under the folder you opened instead of dumping siblings", () => {
 		const tree = buildSubjectTree([
 			hit("$KV.shop", { kind: "kv", expandable: true, streams: [{ name: "KV_shop", kind: "kv", pattern: "$KV.shop.>" }] }),

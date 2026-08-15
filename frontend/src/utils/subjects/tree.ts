@@ -91,9 +91,10 @@ export function buildSubjectTree(hits: SubjectHit[]): SubjectNode[] {
 		while (i < segments.length) {
 			const remaining = segments.length - i
 			const existing = current.children.get(segments[i])
-			// Prefer an existing folder (the bucket or pattern you opened)
-			// so stored names nest under it instead of dumping as siblings.
-			const stacked = i >= MAX_TREE_DEPTH - 1 && remaining > 1 && !existing
+			// Nest under a bucket or pattern you opened. A live prefix
+			// (foo.bar plus foo.bar.x) must not grow a third hallway.
+			const nestUnderOpen = !!existing?.hit?.expandable
+			const stacked = i >= MAX_TREE_DEPTH - 1 && remaining > 1 && !nestUnderOpen
 			const take = stacked ? remaining : 1
 			const segment = segments.slice(i, i + take).join(".")
 			const path = segments.slice(0, i + take).join(".")

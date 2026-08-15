@@ -8,7 +8,7 @@ This card answers one question: **what names exist right now?** It is not MESSAG
 
 The first paint is a **family list** — the first token of each name (`orders`, `ghost`, `$KV`). Folders start closed. That is the stream-shaped view. Notification leaves (heartbeats, keys, NMEA sentences) stay behind a door until you open one.
 
-Open a family and you get **one more level**. A normal name stays one child (`orders` → `created`). Anything deeper is a **partial stack** on one row (`hb.cc.getbygenius.digimasons-2`), never a hallway of folders.
+Open a family and you get **one more level**. A normal name stays one child (`orders` → `created`). Anything deeper is a **partial stack** on one row (`hb.cc.getbygenius.digimasons-2`), never a hallway of folders. A live prefix (`foo.bar` plus `foo.bar.x`) stays two rows. Only a pattern or bucket you open with ▸ nests stored names underneath.
 
 Open a name with a ▸ (a JetStream pattern, KV bucket, or object store). Stored names load **under that row**, still stacked if they are deep. `live` means we heard it during a listen. Core does not keep a last message.
 
