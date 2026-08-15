@@ -294,11 +294,17 @@ func ensureLocalConnection(nuiURL, natsURL string) (string, error) {
 }
 
 func nuiPID() string {
-	out, err := exec.Command("sh", "-c", "ss -lptn 'sport = :31311' | sed -n 's/.*pid=\\([0-9]*\\).*/\\1/p' | head -1").Output()
+	out, err := exec.Command("fuser", "31311/tcp").CombinedOutput()
 	if err != nil {
 		return ""
 	}
-	return strings.TrimSpace(string(out))
+	fields := strings.Fields(string(out))
+	for i := len(fields) - 1; i >= 0; i-- {
+		if _, err := strconv.Atoi(fields[i]); err == nil {
+			return fields[i]
+		}
+	}
+	return ""
 }
 
 func rssKB(pid string) string {

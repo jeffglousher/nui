@@ -26,6 +26,15 @@ Duplicate:
 go run ./scripts/repro-memory -cmd=badger
 ```
 
+Measured on this host (Badger v4.2.0):
+
+| | `ls` while open | `du` blocks while open | after clean Close |
+|---|---|---|---|
+| DefaultOptions | 2.18GiB (`000001.vlog` 2147483646 + 128MiB mem) | often sparse (48K here); Docker ext4 may allocate the 2GiB | ~1MiB |
+| Tuned NewDocStore | 21MiB (16MiB vlog + 4MiB mem) | ~21MiB | ~1MiB |
+
+The live NUI process using `--db-path=/tmp/nui-demo` matches the default column: `ls` 2.0G on `000002.vlog`, `du -s` 48K. High-rate publishes do **not** grow that file.
+
 ## 2. High-rate MESSAGES listen
 
 A catalog click or the MESSAGES card subscribes over `/ws/sub`. Each NATS
@@ -52,8 +61,18 @@ go run ./scripts/repro-memory -cmd=flood -rate=10000 -size=256 -subjects=1 -dura
 go run ./scripts/repro-memory -cmd=flood -rate=5000 -size=64 -subjects=20000 -duration=30s
 
 # measure NUI RSS + websocket intake (does not need the browser)
-go run ./scripts/repro-memory -cmd=listen -subject=flood.> -duration=30s
+# quote flood.> so the shell does not treat > as a redirect
+go run ./scripts/repro-memory -cmd=listen -subject='flood.>' -duration=30s
 ```
+
+Measured through `/ws/sub` on the running NUI (old binary, local nats-server :4222, not demo.nats.io):
+
+- ~1.1k msg/s relayed (publisher ~1.3–1.7k msg/s)
+- 12s same-subject flood: 12.7k messages, 5.7MiB websocket, NUI RSS **flat** at ~57MiB
+- 12s 20k-distinct-name flood: 11.4k messages, RSS +1.7MiB
+- `--db-path` value log **unchanged**
+
+The Go process is not the high-rate heap. The browser is: `addMessage` used to copy the whole array on every message, `stats` grew one entry per distinct subject, and `try_connecting` filled the in-app log. Open MESSAGES on `local-flood` and listen on `flood.>` while flooding to watch Chrome.
 
 Open MESSAGES on the `local-flood` connection and listen on `flood.>` to watch
 the Chrome heap. The 20k-row cap still copies; the 50ms batch is what keeps
