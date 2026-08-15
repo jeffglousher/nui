@@ -6,8 +6,8 @@ const lastAt = new Map<string, number>()
  * Interval 0 always logs.
  */
 export function limitLogDue(key: string, intervalMs: number, now = Date.now()): boolean {
-	const prev = lastAt.get(key) ?? 0
-	if (intervalMs > 0 && now - prev < intervalMs) return false
+	const prev = lastAt.get(key)
+	if (prev != null && intervalMs > 0 && now - prev < intervalMs) return false
 	lastAt.set(key, now)
 	return true
 }

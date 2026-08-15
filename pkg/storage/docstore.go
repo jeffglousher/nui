@@ -36,7 +36,7 @@ func NewDocStore(path string) (*DB, error) {
 
 func Open(path string, l logging.Slogger) (*DB, error) {
 	if l == nil {
-		l = logging.NullLogger{}
+		l = &logging.NullLogger{}
 	}
 	if path == "" || path == ":memory:" {
 		// Dir/ValueDir must be empty in InMemory mode. Passing ":memory:"
