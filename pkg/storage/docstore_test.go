@@ -3,11 +3,57 @@ package docstore
 import (
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/ostafen/clover/v2/document"
 	"github.com/stretchr/testify/require"
 )
+
+type memLogger struct {
+	mu   sync.Mutex
+	info []string
+	warn []string
+	err  []string
+}
+
+func (m *memLogger) Debug(string, ...any) {}
+func (m *memLogger) Info(msg string, _ ...any) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.info = append(m.info, msg)
+}
+func (m *memLogger) Warn(msg string, _ ...any) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.warn = append(m.warn, msg)
+}
+func (m *memLogger) Error(msg string, _ ...any) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.err = append(m.err, msg)
+}
+
+func (m *memLogger) has(level, substr string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var rows []string
+	switch level {
+	case "info":
+		rows = m.info
+	case "warn":
+		rows = m.warn
+	case "error":
+		rows = m.err
+	}
+	for _, row := range rows {
+		if strings.Contains(row, substr) {
+			return true
+		}
+	}
+	return false
+}
 
 func TestDocStore_InMemoryOpens(t *testing.T) {
 	db, err := NewDocStore(":memory:")
@@ -59,7 +105,8 @@ func TestDocStore_ReclaimsLeftoverValueLog(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, oversized)
 
-	db, err = NewDocStore(dir)
+	log := &memLogger{}
+	db, err = Open(dir, log)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
@@ -68,6 +115,9 @@ func TestDocStore_ReclaimsLeftoverValueLog(t *testing.T) {
 	require.NotNil(t, got)
 	require.Equal(t, "keep-me", got.Get("name"))
 	require.Less(t, maxApparentFile(t, dir), int64(oversizedVlogBytes))
+	require.True(t, log.has("warn", "leftover value log exceeds limit"), "reclaim must be logged")
+	require.True(t, log.has("info", "value log reclaimed"))
+	require.True(t, log.has("info", "opened with nui limits"))
 }
 
 func maxApparentFile(t *testing.T, dir string) int64 {

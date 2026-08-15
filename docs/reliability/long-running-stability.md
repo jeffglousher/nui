@@ -6,6 +6,27 @@ duplicate them quickly and what the code does about each.
 
 Do not publish onto `demo.nats.io`. Use a local `nats-server`.
 
+## Limits are always on
+
+There is no flag to turn these off. They are compile-time constants. Closing
+the issue is not enough: when a cap fires, NUI writes a line so you can see
+it and react. Frontend hits go to the in-app LOG card (throttled, first hit
+then at most once per 10s). Backend hits go to the process log (`slog`).
+The in-app log does not add a line when *it* hits its own cap — that would
+recurse — it `console.warn`s instead.
+
+| What | Default | Where you see it fire |
+|---|---|---|
+| Badger value log | 8MiB file → 16MiB mmap; reclaim leftover `*.vlog` > 32MiB | process log: `badger leftover value log exceeds limit; reclaiming` then `badger value log reclaimed` |
+| Badger open | same options | process log: `badger opened with nui limits` (once per start) |
+| Live MESSAGES tail | newest 8000 | LOG card: `MESSAGES LIMIT` |
+| Per-card subject stats | 2000 names; drop coldest | LOG card: `MESSAGES STATS LIMIT` |
+| Stream messages list | 20000 | LOG card: `STREAM MESSAGES LIMIT` |
+| In-app log | 5000 in memory; last 200 persist | browser console: `LOG LIMIT` |
+| SUBJECTS core listen | 5000 names, 200–10000ms | process log + LOG card: `SUBJECTS LIMIT` / `subjects catalog hit a limit` |
+| SUBJECTS JetStream / occupied | 500 streams, 500 patterns, 500 occupied | same |
+| Websocket reconnect | backoff 3s → 30s; keeps trying | LOG card: `WS RECONNECT` (first close, then every 30s at max delay; success after a storm) |
+
 ## 1. Docker `000001.vlog` is ~2GiB — [nats-nui/nui#125](https://github.com/nats-nui/nui/issues/125)
 
 This is not a logfile. Clover stores connections in Badger. Badger
@@ -95,6 +116,8 @@ saved across reload.
 ## Observe
 
 - Disk: `ls -lh` / `du -sh` on `--db-path` while NUI is **running**
+- Process log: Badger open / reclaim, SUBJECTS catalog caps and failures
+- In-app LOG card: MESSAGES / stats / stream / SUBJECTS / reconnect
 - Goroutines: `go test ./internal/ws/ -run TestHub_NoGoroutineLeakOnSubscriptionChurn -v`
 - Value log: `go test ./pkg/storage/ -run TestDocStore -v`
 - Browser: Chrome task manager / `performance.memory` after a 30s flood

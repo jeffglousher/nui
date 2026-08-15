@@ -14,7 +14,8 @@ import { MessageStore } from "../../message"
 import { ViewState } from "../../viewBase"
 import { buildConnectionMessageSend } from "../utils/factory"
 import { SS_EVENTS } from "@/plugins/SocketService"
-import { appendMessages, recordStat } from "./retain"
+import { logLimit } from "@/stores/log/limit"
+import { appendMessages, MaxMessagesLength, MaxMessageStats, recordStat } from "./retain"
 
 export type { MessageStat } from "./retain"
 
@@ -51,8 +52,12 @@ function flushMessages(store: MessagesStore) {
 	const batch = buf.messages
 	buf.messages = []
 	if (batch.length === 0) return
-	const msgs = appendMessages(store.state.messages, batch)
+	const { messages: msgs, dropped } = appendMessages(store.state.messages, batch)
 	store.setMessages(msgs)
+	if (dropped > 0) {
+		logLimit(`msg-tail-${store.state.uuid}`, "MESSAGES LIMIT",
+			`Live tail dropped ${dropped} older message(s); keeping the newest ${MaxMessagesLength}.`)
+	}
 	const linked = store.state.linked as MessageStore
 	if (!!linked && linked?.state.type == DOC_TYPE.MESSAGE && linked.state.linkToLast) {
 		throttle(`msg-last-${store.state.uuid}`, () => {
@@ -192,7 +197,12 @@ const setup = {
 				payload: msg.payload as string,
 				receivedAt: Date.now(),
 			}
-			store.setStats(recordStat(store.state.stats, msg.subject, dayjs().valueOf()))
+			const { stats, droppedSubject } = recordStat(store.state.stats, msg.subject, dayjs().valueOf())
+			store.setStats(stats)
+			if (droppedSubject) {
+				logLimit(`msg-stats-${store.state.uuid}`, "MESSAGES STATS LIMIT",
+					`Per-card subject stats are capped at ${MaxMessageStats}. Dropped coldest subject ${droppedSubject}.`)
+			}
 
 			const buf = pendingOf(store)
 			buf.messages.push(message)

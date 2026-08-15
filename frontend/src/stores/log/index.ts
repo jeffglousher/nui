@@ -1,11 +1,12 @@
 import { StoreCore, createStore } from "@priolo/jon"
+import { limitLogDue } from "@/utils/limitLog"
 import { deckCardsSo, drawerCardsSo } from "../docs/cards"
 import { Log, MESSAGE_TYPE } from "./utils"
 
 
 
-/** hard cap on in-app log entries kept in memory over a long session */
-const MaxLogsLength = 5000
+/** hard cap on in-app log entries kept in memory over a long session — always on */
+export const MaxLogsLength = 5000
 
 const setup = {
 
@@ -31,7 +32,15 @@ const setup = {
 				})
 			}
 			const next = [...store.state.all, log]
-			store.setAll(next.length > MaxLogsLength ? next.slice(next.length - MaxLogsLength) : next)
+			if (next.length > MaxLogsLength) {
+				// do not add another log line here — that would recurse into the cap
+				if (limitLogDue("in-app-log-cap", 30_000)) {
+					console.warn(`LOG LIMIT: keeping the newest ${MaxLogsLength} in-app log lines`)
+				}
+				store.setAll(next.slice(next.length - MaxLogsLength))
+				return
+			}
+			store.setAll(next)
 		},
 		addError(error: Error, store?: LogStore) {
 			if (!error) return

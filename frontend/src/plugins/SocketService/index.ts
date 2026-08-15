@@ -128,8 +128,16 @@ export class SocketService {
 
 	handleOpen(_: Event) {
 		//console.log("socket:open")
+		const attempts = this.reconnect.try
 		this.reconnect.stop()
 		this.reconnect.tryZero()
+		if (attempts > 1) {
+			logSo.add({
+				type: MESSAGE_TYPE.SUCCESS,
+				title: "WS RECONNECT",
+				body: `websocket reconnected after ${attempts} attempts`,
+			})
+		}
 		this.emitter.emit(SS_EVENTS.WS_CONNECTION, this.websocket.readyState)
 		//this.onOpen?.()
 		changeConnectionStatus(this.cnnId, CNN_STATUS.RECONNECTING)
