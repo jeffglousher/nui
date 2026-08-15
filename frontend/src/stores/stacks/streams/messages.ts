@@ -1,5 +1,6 @@
 import strApi from "@/api/streams"
 import { buildMessageDetail } from "@/stores/docs/utils/factory"
+import { logLimit } from "@/stores/log/limit"
 import { MESSAGE_TYPE } from "@/stores/log/utils"
 import viewSetup, { ViewStore } from "@/stores/stacks/viewBase"
 import { Message } from "@/types/Message"
@@ -18,6 +19,18 @@ import { MSG_FORMAT } from "@/utils/editor"
 
 
 let globalInterval = 50
+
+/** hard cap on stream messages held in memory; paging trims the off-screen side — always on */
+export const MaxStreamMessagesLength = 20000
+
+function retainStreamMessages(merged: Message[], keepStart: boolean, store: { state: { uuid: string } }): Message[] {
+	if (merged.length <= MaxStreamMessagesLength) return merged
+	logLimit(`stream-msgs-${store.state.uuid}`, "STREAM MESSAGES LIMIT",
+		`Stream message list dropped older rows; keeping ${MaxStreamMessagesLength}.`)
+	return keepStart
+		? merged.slice(0, MaxStreamMessagesLength)
+		: merged.slice(merged.length - MaxStreamMessagesLength)
+}
 
 const setup = {
 
@@ -167,7 +180,8 @@ const setup = {
 			// ADD
 			let all = store.state.messages ?? []
 			if (pre) {
-				store.setMessages(msgs.concat(all))
+				const merged = msgs.concat(all)
+				store.setMessages(retainStreamMessages(merged, true, store))
 			} else {
 				// se ho un link del dettaglio MESSAGE e questo vuole sempre l'ultimo allora lo cambio
 				const linked = store.state.linked as MessageStore
@@ -175,7 +189,8 @@ const setup = {
 					const msg = msgs[msgs.length - 1]
 					debounce(`str-last-${store.state.uuid}`, () => linked.setMessage(msg), 300)
 				}
-				store.setMessages(all.concat(msgs))
+				const merged = all.concat(msgs)
+				store.setMessages(retainStreamMessages(merged, false, store))
 			}
 			return msgs.length
 		},

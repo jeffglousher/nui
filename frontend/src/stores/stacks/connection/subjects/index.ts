@@ -1,4 +1,5 @@
 import subjectsApi from "@/api/subjects"
+import { logLimit } from "@/stores/log/limit"
 import cnnSo from "@/stores/connections"
 import { buildMessageDetail } from "@/stores/docs/utils/factory"
 import viewSetup, { ViewStore } from "@/stores/stacks/viewBase"
@@ -98,9 +99,11 @@ const setup = {
 			if (!catalog) return
 			if (!Array.isArray(catalog.streams)) {
 				store.setJetstream({ streams: [], error: catalog.error || "could not be read" })
+				noteSubjectsProblem(store.state.connectionId, "jetstream", catalog.error || "could not be read")
 				return
 			}
 			store.setJetstream(catalog)
+			noteSubjectsCatalog(store.state.connectionId, "jetstream", catalog)
 		},
 
 		async fetchCore(_: void, store?: SubjectsStore) {
@@ -123,17 +126,20 @@ const setup = {
 				})
 				if (store.state.listenGen != gen) return
 				if (!catalog || !Array.isArray(catalog.subjects)) {
+					const error = catalog?.error || "could not listen"
 					store.setCore({
 						filter,
 						listenMs: store.state.listenMs,
 						heard: 0,
 						truncated: false,
 						subjects: [],
-						error: catalog?.error || "could not listen",
+						error,
 					})
+					noteSubjectsProblem(store.state.connectionId, "core", error)
 					return
 				}
 				store.setCore(catalog)
+				noteSubjectsCatalog(store.state.connectionId, "core", catalog)
 			} finally {
 				if (store.state.listenGen == gen) store.setCoreListening(false)
 			}
@@ -185,13 +191,16 @@ const setup = {
 					store, noError: true, loading: false,
 				})
 				if (!catalog || !Array.isArray(catalog.subjects)) {
+					const error = catalog?.error || "could not be read"
 					store.setOccupied({
 						...store.state.occupied,
-						[key]: { stream: stream.name, subjects: [], error: catalog?.error || "could not be read" },
+						[key]: { stream: stream.name, subjects: [], error },
 					})
+					noteSubjectsProblem(store.state.connectionId, "occupied", error)
 					return
 				}
 				store.setOccupied({ ...store.state.occupied, [key]: catalog })
+				noteSubjectsCatalog(store.state.connectionId, "occupied", catalog)
 			} finally {
 				if (store.state.occupiedLoading == key) store.setOccupiedLoading(null)
 			}
@@ -251,3 +260,23 @@ export interface SubjectsStore extends ViewStore, LoadBaseStore, SubjectsGetters
 }
 const subjectsSetup = mixStores(viewSetup, loadBaseSetup, setup)
 export default subjectsSetup
+
+function noteSubjectsProblem(connectionId: string, kind: string, error: string) {
+	logLimit(`subjects-${kind}-err-${connectionId}`, "SUBJECTS",
+		`${kind} catalog: ${error}`)
+}
+
+function noteSubjectsCatalog(
+	connectionId: string,
+	kind: string,
+	catalog: { truncated?: boolean, dropped?: number, failed?: number, streams?: { truncated?: boolean }[] },
+) {
+	const streamCapped = catalog.streams?.some(s => s.truncated) ?? false
+	if (!catalog.truncated && !catalog.dropped && !catalog.failed && !streamCapped) return
+	const bits: string[] = []
+	if (catalog.truncated || streamCapped) bits.push("list was capped")
+	if (catalog.dropped) bits.push(`${catalog.dropped} message(s) dropped`)
+	if (catalog.failed) bits.push(`${catalog.failed} stream(s) failed`)
+	logLimit(`subjects-${kind}-${connectionId}`, "SUBJECTS LIMIT",
+		`${kind} catalog: ${bits.join("; ")}.`)
+}
