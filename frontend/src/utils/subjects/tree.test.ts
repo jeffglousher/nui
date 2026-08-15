@@ -57,6 +57,22 @@ describe("flattenHits", () => {
 		expect(key?.expandable).toBeFalsy()
 	})
 
+	it("only opens a folder on a family capture, not an exact stream name", () => {
+		const hits = flattenHits({
+			showCore: false,
+			showJetStream: true,
+			jetstream: {
+				streams: [
+					{ name: "close", kind: "stream", subjects: [{ subject: "close", kind: "pattern", pattern: "close" }] },
+					{ name: "chaz", kind: "stream", subjects: [{ subject: "foo", kind: "pattern", pattern: "foo.>" }] },
+					{ name: "test_stream", kind: "stream", subjects: [{ subject: "foo", kind: "pattern", pattern: "foo" }] },
+				],
+			},
+		})
+		expect(hits.find(h => h.subject == "close")?.expandable).toBeFalsy()
+		expect(hits.find(h => h.subject == "foo")?.expandable).toBe(true)
+	})
+
 	it("hides a source when its toggle is off without refetching", () => {
 		const hits = flattenHits({
 			showCore: false,

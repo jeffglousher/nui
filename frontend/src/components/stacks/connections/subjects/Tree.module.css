@@ -98,6 +98,10 @@
 	cursor: default;
 }
 
+.stacked {
+	word-break: break-word;
+}
+
 .empty {
 	white-space: normal;
 	line-height: 1.45;

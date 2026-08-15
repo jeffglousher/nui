@@ -1,4 +1,5 @@
 import { CoreCatalog, JetStreamCatalog, OccupiedCatalog, SubjectHit, SubjectNode } from "@/types/Subject"
+import { isFamilyCapture } from "./watch"
 
 export const MAX_TREE_CHILDREN = 50
 // Family at the first token. Anything deeper is one stacked name, not a
@@ -45,7 +46,7 @@ export function flattenHits(opts: {
 			for (const item of stream.subjects ?? []) {
 				const hit = ensure(item.subject)
 				hit.kind = item.kind
-				hit.expandable = item.kind == "pattern" || item.kind == "kv" || item.kind == "object"
+				if (isFamilyCapture(item.kind, item.pattern)) hit.expandable = true
 				hit.streams.push({
 					name: stream.name,
 					kind: stream.kind,

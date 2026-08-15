@@ -1,11 +1,24 @@
 import { Subscription } from "@/types"
 
-function hasWildcard(name: string): boolean {
-	return name.includes("*") || name.endsWith(">")
+export function hasWildcard(name: string): boolean {
+	return !!name && (name.includes("*") || name.endsWith(">"))
 }
 
 function familyName(name: string): string {
 	return hasWildcard(name) ? name : `${name}.>`
+}
+
+/** A ▸ door: KV, object store, or a capture that is actually a family. */
+export function isFamilyCapture(kind?: string, pattern?: string): boolean {
+	if (kind == "kv" || kind == "object") return true
+	if (kind != "pattern") return false
+	return hasWildcard(pattern || "")
+}
+
+/** Prefer the family a stream actually captures when several keepers share a row. */
+export function preferredWatchPattern(streams?: { pattern?: string }[]): string | undefined {
+	const patterns = (streams ?? []).map(s => s.pattern).filter((p): p is string => !!p)
+	return patterns.find(hasWildcard) || patterns[0]
 }
 
 export function watchFilter(node: {
@@ -20,7 +33,7 @@ export function watchFilter(node: {
 	}
 }): string | null {
 	if (node.remainder) return null
-	const pattern = node.hit?.streams?.find(s => s.pattern)?.pattern
+	const pattern = preferredWatchPattern(node.hit?.streams)
 	if (node.hit?.kind == "kv" || node.hit?.kind == "object") {
 		const name = node.hit.subject
 		if (!name) return null

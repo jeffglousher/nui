@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest"
-import { focusWatch, watchFilter } from "./watch"
+import { focusWatch, isFamilyCapture, preferredWatchPattern, watchFilter } from "./watch"
+
+describe("isFamilyCapture", () => {
+	it("treats only a wildcard, KV, or object as a folder", () => {
+		expect(isFamilyCapture("pattern", "close")).toBe(false)
+		expect(isFamilyCapture("pattern", "foo.>")).toBe(true)
+		expect(isFamilyCapture("pattern", "jetris.chat.*")).toBe(true)
+		expect(isFamilyCapture("kv", "$KV.shop")).toBe(true)
+		expect(isFamilyCapture("object", "$O.files")).toBe(true)
+		expect(isFamilyCapture("occupied", "foo.bar")).toBe(false)
+	})
+})
+
+describe("preferredWatchPattern", () => {
+	it("picks the family when an exact capture shares the row", () => {
+		expect(preferredWatchPattern([{ pattern: "foo" }, { pattern: "foo.>" }])).toBe("foo.>")
+		expect(preferredWatchPattern([{ pattern: "close" }])).toBe("close")
+	})
+})
 
 describe("watchFilter", () => {
 	it("watches a live or stored name as itself", () => {
@@ -14,6 +32,25 @@ describe("watchFilter", () => {
 			hit: { subject: "foo", kind: "pattern", expandable: true, streams: [{ pattern: "foo.>" }] },
 		})).toBe("foo.>")
 		expect(watchFilter({ path: "orders", hit: { subject: "orders", kind: "pattern" } })).toBe("orders.>")
+	})
+
+	it("watches an exact stream capture as itself, not a invented family", () => {
+		expect(watchFilter({
+			path: "close",
+			hit: { subject: "close", kind: "pattern", streams: [{ pattern: "close" }] },
+		})).toBe("close")
+	})
+
+	it("prefers the family when one keeper is exact and another is a prefix", () => {
+		expect(watchFilter({
+			path: "foo",
+			hit: {
+				subject: "foo",
+				kind: "pattern",
+				expandable: true,
+				streams: [{ pattern: "foo" }, { pattern: "foo.>" }],
+			},
+		})).toBe("foo.>")
 	})
 
 	it("watches a family folder as that prefix, even if the token itself was heard", () => {

@@ -10,7 +10,7 @@ The first paint is a **family list** — the first token of each name (`orders`,
 
 Open a family and you get **one more level**. A normal name stays one child (`orders` → `created`). Anything deeper is a **partial stack** on one row (`hb.cc.getbygenius.digimasons-2`), never a hallway of folders. A live prefix (`foo.bar` plus `foo.bar.x`) stays two rows. Only a pattern or bucket you open with ▸ nests stored names underneath.
 
-Open a name with a ▸ (a JetStream pattern, KV bucket, or object store). Stored names load **under that row**, still stacked if they are deep. `live` means we heard it during a listen. Core does not keep a last message.
+Open a name with a ▸ (a wildcard pattern, KV bucket, or object store). An exact stream name is a leaf — click it to watch that name. Stored names load **under that row**, still stacked if they are deep. `live` means we heard it during a listen. Core does not keep a last message.
 
 FIND and reload sit in the header, same as STREAMS. CORE / JETSTREAM are view filters in the card, not header actions. FIND opens matching families so the leaf is visible. Reload and poll sample again. Open folders stay open. Click a name to watch **that** name in MESSAGES — it replaces what MESSAGES is listening to and starts a fresh log for that name. A family or stream pattern watches the prefix (`foo.>`), not the bare token. Add more names in the MESSAGES subject list. The ▸ opens a folder; the name is what you watch. Hover a row (or the watched row) to copy the same name MESSAGES will listen to. Names use the same monospace 12px as the STREAMS table. A chip appears only when it adds a fact (`live`, `KV`, `FILES`, or a stream whose name is not the row). The footer stays quiet unless something failed or was capped.
 
