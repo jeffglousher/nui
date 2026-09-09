@@ -16,7 +16,7 @@ require (
 	github.com/nats-io/nkeys v0.4.15
 	github.com/ostafen/clover/v2 v2.0.0-alpha.3.0.20240131202429-e6a58d6d36bf
 	github.com/samber/slog-fiber v1.11.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/synadia-io/orbit.go/natssysclient v0.1.1
 	github.com/wailsapp/wails/v2 v2.12.0
 )
@@ -57,14 +57,14 @@ require (
 	github.com/imkira/go-interpol v1.1.0 // indirect
 	github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e // indirect
 	github.com/klauspost/compress v1.18.5 // indirect
-	github.com/labstack/echo/v4 v4.13.3 // indirect
-	github.com/labstack/gommon v0.4.2 // indirect
+	github.com/labstack/echo/v4 v4.15.3 // indirect
+	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/leaanthony/go-ansi-parser v1.6.1 // indirect
 	github.com/leaanthony/gosod v1.0.4 // indirect
 	github.com/leaanthony/slicer v1.6.0 // indirect
 	github.com/leaanthony/u v1.1.1 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/minio/highwayhash v1.0.4-0.20251030100505-070ab1a87a76 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
@@ -98,12 +98,12 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect
 	go.opentelemetry.io/otel/trace v1.19.0 // indirect
-	golang.org/x/crypto v0.49.0 // indirect
-	golang.org/x/net v0.51.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect; indirectgo mod why
+	golang.org/x/crypto v0.50.0 // indirect
+	golang.org/x/net v0.53.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/text v0.36.0 // indirect; indirectgo mod why
 	golang.org/x/time v0.15.0 // indirect
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
