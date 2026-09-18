@@ -38,7 +38,7 @@ export async function SaveSession() {
 		deckUuids: deckStates.map(s => s.uuid),
 		drawerUuids: drawerStates.map(s => s.uuid),
 		menuUuids: menuSo.state.all.map(store => store.state.uuid),
-		logs: logSo.state.all,
+		logs: logSo.state.all.slice(-200),
 	}
 	saveLocalStorage(session)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/nats-nui/nui/internal/ws"
+	"github.com/nats-nui/nui/pkg/logging"
 )
 
 const (
@@ -161,4 +162,43 @@ func queryIntDefault(c *fiber.Ctx, key string, def int) int {
 		return def
 	}
 	return n
+}
+
+func noteCatalogLimit(l logging.Slogger, kind, connectionID string, truncated bool, dropped, heard, failed int, extra ...any) {
+	if l == nil || (!truncated && dropped == 0 && failed == 0) {
+		return
+	}
+	args := []any{
+		"kind", kind,
+		"connection_id", connectionID,
+		"truncated", truncated,
+		"dropped", dropped,
+		"heard", heard,
+		"failed", failed,
+	}
+	args = append(args, extra...)
+	l.Warn("subjects catalog hit a limit", args...)
+}
+
+func noteCatalogError(l logging.Slogger, kind, connectionID, err string, extra ...any) {
+	if l == nil || err == "" {
+		return
+	}
+	args := []any{"kind", kind, "connection_id", connectionID, "error", err}
+	args = append(args, extra...)
+	l.Warn("subjects catalog failed", args...)
+}
+
+func jetStreamLimitHit(out *JetStreamCatalog) (truncated bool, failed int) {
+	if out == nil {
+		return false, 0
+	}
+	truncated = out.Truncated
+	for _, s := range out.Streams {
+		if s.Truncated {
+			truncated = true
+			break
+		}
+	}
+	return truncated, out.Failed
 }

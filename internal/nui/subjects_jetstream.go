@@ -26,6 +26,10 @@ func (a *App) HandleJetStreamCatalog(c *fiber.Ctx) error {
 		return err
 	}
 	out := enumerateJetStreamPatterns(ctx, js, discardSys)
+	noteCatalogError(a.l, "jetstream", c.Params("id"), out.Error)
+	truncated, failed := jetStreamLimitHit(out)
+	noteCatalogLimit(a.l, "jetstream", c.Params("id"), truncated, 0, len(out.Streams), failed,
+		"max_streams", maxJSStreams, "max_patterns_per_stream", maxPatternsPerStream)
 	return c.JSON(out)
 }
 
@@ -53,6 +57,9 @@ func (a *App) HandleJetStreamOccupied(c *fiber.Ctx) error {
 		return err
 	}
 	out := occupiedSubjects(ctx, js, streamName, filter, discardSys)
+	noteCatalogError(a.l, "occupied", c.Params("id"), out.Error, "stream", streamName, "filter", filter)
+	noteCatalogLimit(a.l, "occupied", c.Params("id"), out.Truncated, 0, len(out.Subjects), 0,
+		"stream", streamName, "filter", filter, "max_occupied", maxOccupiedPerStream)
 	return c.JSON(out)
 }
 
