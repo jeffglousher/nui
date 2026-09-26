@@ -49,9 +49,6 @@ func (a *App) HandleCoreListen(c *fiber.Ctx) error {
 	defer cancel()
 
 	out := sampleCore(ctx, nc, filter, time.Duration(listenMs)*time.Millisecond, discardSys)
-	noteCatalogError(a.l, "core", c.Params("id"), out.Error, "filter", filter)
-	noteCatalogLimit(a.l, "core", c.Params("id"), out.Truncated, out.Dropped, out.Heard, 0,
-		"filter", filter, "max_subjects", maxCoreSubjects)
 	return c.JSON(out)
 }
 

@@ -14,8 +14,7 @@ import { MessageStore } from "../../message"
 import { ViewState } from "../../viewBase"
 import { buildConnectionMessageSend } from "../utils/factory"
 import { SS_EVENTS } from "@/plugins/SocketService"
-import { logLimit } from "@/stores/log/limit"
-import { appendMessages, MaxMessagesLength, MaxMessageStats, recordStat } from "./retain"
+import { appendMessages, MaxMessagesLength, MessageStat, recordStat } from "./retain"
 
 export type { MessageStat } from "./retain"
 
@@ -48,16 +47,14 @@ function dropPending(store: MessagesStore) {
 function flushMessages(store: MessagesStore) {
 	const buf = pendingByCard.get(store.state.uuid)
 	if (!buf) return
+	if (buf.timer) clearTimeout(buf.timer)
 	buf.timer = null
 	const batch = buf.messages
 	buf.messages = []
 	if (batch.length === 0) return
-	const { messages: msgs, dropped } = appendMessages(store.state.messages, batch)
+	const msgs = appendMessages(store.state.messages, batch)
 	store.setMessages(msgs)
-	if (dropped > 0) {
-		logLimit(`msg-tail-${store.state.uuid}`, "MESSAGES LIMIT",
-			`Live tail dropped ${dropped} older message(s); keeping the newest ${MaxMessagesLength}.`)
-	}
+	store.setStats(store.state.stats)
 	const linked = store.state.linked as MessageStore
 	if (!!linked && linked?.state.type == DOC_TYPE.MESSAGE && linked.state.linkToLast) {
 		throttle(`msg-last-${store.state.uuid}`, () => {
@@ -179,7 +176,6 @@ const setup = {
 			socketPool.destroy(store.getSocketServiceId())
 		},
 
-		/** empty the live tail without a late 50ms flush putting rows back */
 		clearMessages(_: void, store?: MessagesStore) {
 			dropPending(store)
 			store.setMessages([])
@@ -197,15 +193,15 @@ const setup = {
 				payload: msg.payload as string,
 				receivedAt: Date.now(),
 			}
-			const { stats, droppedSubject } = recordStat(store.state.stats, msg.subject, dayjs().valueOf())
-			store.setStats(stats)
-			if (droppedSubject) {
-				logLimit(`msg-stats-${store.state.uuid}`, "MESSAGES STATS LIMIT",
-					`Per-card subject stats are capped at ${MaxMessageStats}. Dropped coldest subject ${droppedSubject}.`)
-			}
+			const stats = recordStat(store.state.stats, msg.subject, dayjs().valueOf())
+			store.state.stats = stats
 
 			const buf = pendingOf(store)
 			buf.messages.push(message)
+			if (buf.messages.length >= MaxMessagesLength) {
+				flushMessages(store)
+				return
+			}
 			if (!buf.timer) {
 				buf.timer = setTimeout(() => flushMessages(store), FLUSH_MS)
 			}
@@ -228,7 +224,7 @@ const setup = {
 				payload: subjWS.join(", "),
 				receivedAt: Date.now(),
 			}
-			store.setMessages([...store.state.messages, msgChangeSubj])
+			store.setMessages(appendMessages(store.state.messages, [msgChangeSubj]))
 		},
 		/** invio al REST nel caso ci siano nuovi preferiti */
 		updateSubscriptions: (_: void, store?: MessagesStore) => {
@@ -308,5 +304,3 @@ export interface MessagesStore extends ViewStore, MessagesGetters, MessagesActio
 }
 const msgSetup = mixStores(viewSetup, setup)
 export default msgSetup
-
-

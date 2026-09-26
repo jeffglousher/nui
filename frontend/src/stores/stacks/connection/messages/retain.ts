@@ -6,27 +6,15 @@ export type MessageStat = {
 	last: number,
 }
 
-/** live MESSAGES tail kept in memory — always on */
-export const MaxMessagesLength = 8000
+export const MaxMessagesLength = 20000
 
-/** distinct subjects tracked in the per-card stats map — always on */
 export const MaxMessageStats = 2000
 
-export type AppendMessagesResult = {
-	messages: Message[]
-	dropped: number
-}
-
-export type RecordStatResult = {
-	stats: { [subject: string]: MessageStat }
-	droppedSubject: string | null
-}
-
-export function appendMessages(current: Message[], batch: Message[], max = MaxMessagesLength): AppendMessagesResult {
-	if (!batch.length) return { messages: current, dropped: 0 }
+export function appendMessages(current: Message[], batch: Message[], max = MaxMessagesLength): Message[] {
+	if (!batch.length) return current
 	const next = current.length === 0 ? batch.slice() : current.concat(batch)
-	if (next.length <= max) return { messages: next, dropped: 0 }
-	return { messages: next.slice(next.length - max), dropped: next.length - max }
+	if (next.length <= max) return next
+	return next.slice(next.length - max)
 }
 
 export function recordStat(
@@ -34,16 +22,16 @@ export function recordStat(
 	subject: string,
 	now: number,
 	max = MaxMessageStats,
-): RecordStatResult {
-	const existing = stats[subject]
+): { [subject: string]: MessageStat } {
+	const existing = Object.prototype.hasOwnProperty.call(stats, subject) ? stats[subject] : undefined
 	if (existing) {
 		existing.counter++
 		existing.last = now
-		return { stats, droppedSubject: null }
+		return stats
 	}
 	const next = { ...stats, [subject]: { subject, counter: 1, last: now } }
 	const keys = Object.keys(next)
-	if (keys.length <= max) return { stats: next, droppedSubject: null }
+	if (keys.length <= max) return next
 	let oldestKey = keys[0]
 	let oldestLast = next[oldestKey].last
 	for (const key of keys) {
@@ -53,5 +41,5 @@ export function recordStat(
 		}
 	}
 	delete next[oldestKey]
-	return { stats: next, droppedSubject: oldestKey }
+	return next
 }

@@ -50,14 +50,12 @@ export class SocketService {
 		try {
 			let url = `${protocol}//${host}:${port}${base}/ws/sub`
 			if (connId) url = `${url}?id=${connId}`
-			if (this.reconnect.try <= 1) {
-				logSo.add({
-					type: MESSAGE_TYPE.INFO,
-					title: "WS-CONNECTIONS",
-					body: `connecting`,
-					data: url,
-				})
-			}
+			logSo.add({
+				type: MESSAGE_TYPE.INFO,
+				title: "WS-CONNECTIONS",
+				body: `try_connecting`,
+				data: url,
+			})
 			this.websocket = new WebSocket(url);
 		} catch (error) {
 			this.reconnect.start()
@@ -104,6 +102,12 @@ export class SocketService {
 	 * invia un messaggio al server
 	 */
 	send(msg: string) {
+		logSo.add({
+			type: MESSAGE_TYPE.INFO,
+			title: "WS-CONNECTIONS",
+			body: `send:FE>BE`,
+			data: msg,
+		})
 		try {
 			this.websocket.send(msg)
 		} catch (err) {
@@ -112,6 +116,12 @@ export class SocketService {
 	}
 
 	sendSubjects(subjects: string[]) {
+		logSo.add({
+			type: MESSAGE_TYPE.INFO,
+			title: "WS-CONNECTIONS",
+			body: `send:FE>BE`,
+			data: subjects
+		})
 		const msg: SocketMessage = {
 			type: MSG_TYPE.SUB_REQUEST,
 			payload: { subjects },
@@ -128,16 +138,8 @@ export class SocketService {
 
 	handleOpen(_: Event) {
 		//console.log("socket:open")
-		const attempts = this.reconnect.try
 		this.reconnect.stop()
 		this.reconnect.tryZero()
-		if (attempts > 1) {
-			logSo.add({
-				type: MESSAGE_TYPE.SUCCESS,
-				title: "WS RECONNECT",
-				body: `websocket reconnected after ${attempts} attempts`,
-			})
-		}
 		this.emitter.emit(SS_EVENTS.WS_CONNECTION, this.websocket.readyState)
 		//this.onOpen?.()
 		changeConnectionStatus(this.cnnId, CNN_STATUS.RECONNECTING)

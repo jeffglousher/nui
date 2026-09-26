@@ -24,7 +24,7 @@ type Nui struct {
 
 func Setup(dbPath, protoschemasPath string, logger logging.Slogger) (*Nui, error) {
 	n := &Nui{}
-	store, err := docstore.Open(dbPath, logger)
+	store, err := docstore.NewDocStore(dbPath)
 	if err != nil {
 		return nil, err
 	}
