@@ -19,15 +19,6 @@ import { MSG_FORMAT } from "@/utils/editor"
 
 let globalInterval = 50
 
-export const MaxStreamMessagesLength = 20000
-
-function retainStreamMessages(merged: Message[], keepStart: boolean): Message[] {
-	if (merged.length <= MaxStreamMessagesLength) return merged
-	return keepStart
-		? merged.slice(0, MaxStreamMessagesLength)
-		: merged.slice(merged.length - MaxStreamMessagesLength)
-}
-
 const setup = {
 
 	state: {
@@ -176,8 +167,7 @@ const setup = {
 			// ADD
 			let all = store.state.messages ?? []
 			if (pre) {
-				const merged = msgs.concat(all)
-				store.setMessages(retainStreamMessages(merged, true))
+				store.setMessages(msgs.concat(all))
 			} else {
 				// se ho un link del dettaglio MESSAGE e questo vuole sempre l'ultimo allora lo cambio
 				const linked = store.state.linked as MessageStore
@@ -185,8 +175,7 @@ const setup = {
 					const msg = msgs[msgs.length - 1]
 					debounce(`str-last-${store.state.uuid}`, () => linked.setMessage(msg), 300)
 				}
-				const merged = all.concat(msgs)
-				store.setMessages(retainStreamMessages(merged, false))
+				store.setMessages(all.concat(msgs))
 			}
 			return msgs.length
 		},
@@ -293,3 +282,4 @@ export interface StreamMessagesStore extends ViewStore, LoadBaseStore, EditorSto
 }
 const streamMessagesSetup = mixStores(viewSetup, loadBaseSetup, editorSetup, setup)
 export default streamMessagesSetup
+

@@ -37,3 +37,12 @@ func TestFanIn_ClosesWhenInputsDrain(t *testing.T) {
 		}
 	}
 }
+
+func TestFanIn_ClosesWithoutInputs(t *testing.T) {
+	select {
+	case _, ok := <-FanIn[int](0):
+		require.False(t, ok)
+	case <-time.After(time.Second):
+		t.Fatal("FanIn output was never closed")
+	}
+}

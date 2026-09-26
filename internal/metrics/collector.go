@@ -43,6 +43,7 @@ func (s *Collector) Start(ctx context.Context, cfg ServiceCfg) (<-chan Metrics, 
 	if pollingInterval <= 0 {
 		pollingInterval = 1 * time.Second
 	}
+	ticker := time.Tick(pollingInterval)
 	conn, err := s.repo.GetById(cfg.ConnectionId)
 	if err != nil {
 		return nil, err
@@ -53,8 +54,6 @@ func (s *Collector) Start(ctx context.Context, cfg ServiceCfg) (<-chan Metrics, 
 	}
 
 	go func() {
-		ticker := time.NewTicker(pollingInterval)
-		defer ticker.Stop()
 		generalRatesDecorator := NewRatesDecorator(ratesMetrics)
 		connzDecorators := make(map[int]MetricsDecorator)
 		metrics := fetchMetrics(ctx, source, generalRatesDecorator, connzDecorators)
@@ -64,7 +63,7 @@ func (s *Collector) Start(ctx context.Context, cfg ServiceCfg) (<-chan Metrics, 
 			case <-ctx.Done():
 				close(metricsChan)
 				return
-			case <-ticker.C:
+			case <-ticker:
 				metrics := fetchMetrics(ctx, source, generalRatesDecorator, connzDecorators)
 				sendMetrics(metricsChan, metrics)
 			}

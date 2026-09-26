@@ -4,8 +4,6 @@ import { Log, MESSAGE_TYPE } from "./utils"
 
 
 
-export const MaxLogsLength = 5000
-
 const setup = {
 
 	state: {
@@ -29,7 +27,7 @@ const setup = {
 					body: log.body,
 				})
 			}
-			store.setAll([...store.state.all, log].slice(-MaxLogsLength))
+			store.setAll([...store.state.all, log])
 		},
 		addError(error: Error, store?: LogStore) {
 			if (!error) return
