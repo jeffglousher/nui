@@ -21,17 +21,16 @@ func TestFanIn_ClosesWhenInputsDrain(t *testing.T) {
 		close(b)
 	}()
 
-	got := map[int]bool{}
+	var got []int
 	timeout := time.After(time.Second)
 	for {
 		select {
 		case n, ok := <-out:
 			if !ok {
-				require.True(t, got[1])
-				require.True(t, got[2])
+				require.ElementsMatch(t, []int{1, 2}, got)
 				return
 			}
-			got[n] = true
+			got = append(got, n)
 		case <-timeout:
 			t.Fatal("FanIn output was never closed")
 		}
