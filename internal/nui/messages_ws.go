@@ -6,6 +6,9 @@ import (
 	"github.com/gofiber/contrib/websocket"
 	"github.com/google/uuid"
 	"github.com/nats-nui/nui/internal/ws"
+	"net"
+	"sync"
+	"time"
 )
 
 func (a *App) HandleWsSub(c *websocket.Conn) {
@@ -20,6 +23,7 @@ func (a *App) HandleWsSub(c *websocket.Conn) {
 		return
 	}
 	ctx, cancel := context.WithCancel(a.ctx)
+	defer cancel()
 	clientId := uuid.NewString()
 	a.l.Info("incoming ws connection", "connection-id", conn.Id, "client-id", clientId)
 
@@ -37,9 +41,24 @@ func (a *App) HandleWsSub(c *websocket.Conn) {
 		return
 	}
 
-	go HandleWsMsgs(c, ctx, msgCh, cancel)
-	go HandleWsRequest(c, ctx, reqCh, cancel)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		HandleWsMsgs(c, ctx, msgCh, cancel)
+	}()
+	go func() {
+		defer wg.Done()
+		HandleWsRequest(c, ctx, reqCh, cancel)
+	}()
 	<-ctx.Done()
+	// fasthttp's hijacked wrapper defers Close until this callback returns.
+	socket := c.NetConn()
+	if raw, ok := socket.(interface{ UnsafeConn() net.Conn }); ok {
+		socket = raw.UnsafeConn()
+	}
+	_ = socket.Close()
+	wg.Wait()
 }
 
 func HandleWsRequest(c *websocket.Conn, ctx context.Context, reqCh chan *ws.Request, cancel context.CancelFunc) {
@@ -47,8 +66,8 @@ func HandleWsRequest(c *websocket.Conn, ctx context.Context, reqCh chan *ws.Requ
 		req := &ws.Request{}
 		err := c.ReadJSON(req)
 		if err != nil {
-			cancel()
 			writeError(c, 4422, err)
+			cancel()
 			return
 		}
 		select {
@@ -69,8 +88,8 @@ func HandleWsMsgs(c *websocket.Conn, ctx context.Context, msgCh chan ws.Payload,
 			message := ws.NewWsMessage(msg)
 			err := c.WriteJSON(message)
 			if err != nil {
-				cancel()
 				writeError(c, 4422, err)
+				cancel()
 				return
 			}
 		}
@@ -78,7 +97,7 @@ func HandleWsMsgs(c *websocket.Conn, ctx context.Context, msgCh chan ws.Payload,
 }
 
 func writeError(c *websocket.Conn, status int, err error) {
-	_ = c.WriteMessage(
+	_ = c.WriteControl(
 		websocket.CloseMessage,
-		websocket.FormatCloseMessage(status, err.Error()))
+		websocket.FormatCloseMessage(status, err.Error()), time.Now().Add(time.Second))
 }
