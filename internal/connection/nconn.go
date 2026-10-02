@@ -15,8 +15,8 @@ type NatsConn struct {
 	*nats.Conn
 	connectionEventsSubs []*subscriber
 	subsMutex            sync.Mutex
-	eventHandleMutex     sync.Mutex
 	mockMode             bool
+	closed               bool
 	lastStatus           string
 	lastError            error
 }
@@ -31,6 +31,12 @@ func (n *NatsConn) ObserveConnectionEvents(ctx context.Context) <-chan ConnStatu
 	events := make(chan ConnStatusChanged, 5)
 	sub := &subscriber{events: events, stop: stop}
 	n.subsMutex.Lock()
+	if n.closed {
+		n.subsMutex.Unlock()
+		stop()
+		close(events)
+		return events
+	}
 	n.connectionEventsSubs = append(n.connectionEventsSubs, sub)
 	n.subsMutex.Unlock()
 	go n.listenForStop(ctx, sub)
@@ -38,6 +44,8 @@ func (n *NatsConn) ObserveConnectionEvents(ctx context.Context) <-chan ConnStatu
 }
 
 func (n *NatsConn) LastEvent() (string, error) {
+	n.subsMutex.Lock()
+	defer n.subsMutex.Unlock()
 	return n.lastStatus, n.lastError
 }
 
@@ -50,16 +58,16 @@ func (n *NatsConn) buildStatusHandlerWithErr(status string) nats.ConnErrHandler 
 func (n *NatsConn) buildStatusHandler(status string) nats.ConnHandler {
 	return func(conn *nats.Conn) {
 		var err error
-		if n.Conn.Status() != nats.CONNECTED {
-			err = n.Conn.LastError()
+		if conn.Status() != nats.CONNECTED {
+			err = conn.LastError()
 		}
 		n.handleEvent(status, err)
 	}
 }
 
 func (n *NatsConn) handleEvent(status string, err error) {
-	n.eventHandleMutex.Lock()
-	defer n.eventHandleMutex.Unlock()
+	n.subsMutex.Lock()
+	defer n.subsMutex.Unlock()
 	n.lastStatus = status
 	n.lastError = err
 	for _, s := range n.connectionEventsSubs {
@@ -91,14 +99,20 @@ func (n *NatsConn) removeListener(toRemove *subscriber) {
 
 func (n *NatsConn) Close() {
 	n.subsMutex.Lock()
-	defer n.subsMutex.Unlock()
+	if n.closed {
+		n.subsMutex.Unlock()
+		return
+	}
+	n.closed = true
+	for _, s := range n.connectionEventsSubs {
+		s.stop()
+		close(s.events)
+	}
+	n.connectionEventsSubs = nil
+	n.subsMutex.Unlock()
 	if !n.mockMode {
 		n.Conn.Close()
 	}
-	for _, s := range n.connectionEventsSubs {
-		s.stop()
-	}
-	n.connectionEventsSubs = nil
 }
 
 func NewNatsConn(hosts string, options ...nats.Option) (*NatsConn, error) {
