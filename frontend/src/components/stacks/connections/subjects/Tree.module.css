@@ -1,16 +1,20 @@
 .root {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
-	padding: 4px 0 8px;
+	gap: 0;
+	padding: 0 0 8px;
+	font-family: monospace;
+	font-size: 12px;
+	font-weight: 600;
 }
 
 .node {
+	position: relative;
 	display: flex;
 	align-items: center;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 	gap: 6px;
-	padding: 4px 6px;
+	padding: 3px 5px;
 	border-radius: 5px;
 	cursor: pointer;
 }
@@ -24,20 +28,30 @@
 	color: var(--cmp-select-fg);
 }
 
+.selected :global(.jack-hover-hide) {
+	display: flex;
+}
+
 .twist {
 	width: 22px;
 	height: 22px;
 	flex: 0 0 22px;
 	opacity: .9;
-	font-size: 14px;
+	font-family: sans-serif;
+	font-size: 12px;
 	line-height: 22px;
 	text-align: center;
 	cursor: pointer;
 }
 
+.twistPad {
+	width: 22px;
+	height: 22px;
+	flex: 0 0 22px;
+}
+
 .segment {
-	font-weight: 700;
-	flex: 1 1 80px;
+	flex: 1 1 auto;
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -47,42 +61,45 @@
 .meta {
 	display: flex;
 	align-items: center;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 	justify-content: flex-end;
-	gap: 4px;
-	flex: 1 1 120px;
+	gap: 6px;
+	flex: 0 1 auto;
+	min-width: 0;
 }
 
 .chip {
-	font-size: 10px;
-	font-weight: 700;
-	letter-spacing: .03em;
-	padding: 1px 5px;
-	border-radius: 4px;
-	max-width: 140px;
+	font: inherit;
+	padding: 0 4px;
+	border-radius: 3px;
+	max-width: 16ch;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
 .core {
-	background-color: rgba(16, 243, 243, .35);
-	color: #111;
+	background-color: rgba(16, 243, 243, .22);
+	color: inherit;
 }
 
 .js {
-	background-color: rgba(235, 251, 53, .45);
-	color: #111;
+	background-color: rgba(235, 251, 53, .28);
+	color: inherit;
 }
 
 .count {
-	font-size: 11px;
+	font: inherit;
 	opacity: .75;
 }
 
 .remainder {
 	opacity: .65;
 	cursor: default;
+}
+
+.stacked {
+	word-break: break-word;
 }
 
 .empty {

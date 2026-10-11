@@ -1,6 +1,10 @@
 import { CoreCatalog, JetStreamCatalog, OccupiedCatalog, SubjectHit, SubjectNode } from "@/types/Subject"
+import { isFamilyCapture } from "./watch"
 
 export const MAX_TREE_CHILDREN = 50
+// Family at the first token. Anything deeper is one stacked name, not a
+// nested inbox of heartbeats, keys, and notification leaves.
+export const MAX_TREE_DEPTH = 2
 
 export function occupiedKey(stream: string, pattern?: string): string {
 	return `${stream}::${pattern || ">"}`
@@ -42,7 +46,7 @@ export function flattenHits(opts: {
 			for (const item of stream.subjects ?? []) {
 				const hit = ensure(item.subject)
 				hit.kind = item.kind
-				hit.expandable = item.kind == "pattern" || item.kind == "kv" || item.kind == "object"
+				if (isFamilyCapture(item.kind, item.pattern)) hit.expandable = true
 				hit.streams.push({
 					name: stream.name,
 					kind: stream.kind,
@@ -53,6 +57,8 @@ export function flattenHits(opts: {
 		}
 		for (const occ of Object.values(opts.occupied ?? {})) {
 			for (const item of occ.subjects ?? []) {
+				const already = bySubject.get(item.subject)
+				if (already?.expandable) continue
 				const hit = ensure(item.subject)
 				if (!hit.kind || hit.kind == "live") hit.kind = "occupied"
 				if (!hit.streams.some(s => s.name == occ.stream)) {
@@ -73,6 +79,7 @@ type Draft = {
 	path: string
 	children: Map<string, Draft>
 	hit?: SubjectHit
+	stacked?: boolean
 }
 
 export function buildSubjectTree(hits: SubjectHit[]): SubjectNode[] {
@@ -81,15 +88,24 @@ export function buildSubjectTree(hits: SubjectHit[]): SubjectNode[] {
 		const segments = hit.subject.split(".").filter(s => s.length > 0)
 		if (segments.length == 0) continue
 		let current = root
-		let path = ""
-		for (const segment of segments) {
-			path = path.length == 0 ? segment : `${path}.${segment}`
+		let i = 0
+		while (i < segments.length) {
+			const remaining = segments.length - i
+			const existing = current.children.get(segments[i])
+			// Nest under a bucket or pattern you opened. A live prefix
+			// (foo.bar plus foo.bar.x) must not grow a third hallway.
+			const nestUnderOpen = !!existing?.hit?.expandable
+			const stacked = i >= MAX_TREE_DEPTH - 1 && remaining > 1 && !nestUnderOpen
+			const take = stacked ? remaining : 1
+			const segment = segments.slice(i, i + take).join(".")
+			const path = segments.slice(0, i + take).join(".")
 			let child = current.children.get(segment)
 			if (!child) {
-				child = { segment, path, children: new Map() }
+				child = { segment, path, children: new Map(), stacked }
 				current.children.set(segment, child)
 			}
 			current = child
+			i += take
 		}
 		current.hit = hit
 	}
@@ -121,6 +137,7 @@ function freeze(draft: Draft): SubjectNode {
 		children,
 		hit: draft.hit,
 		names,
+		stacked: draft.stacked,
 	}
 }
 

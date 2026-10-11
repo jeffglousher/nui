@@ -4,12 +4,13 @@ import layoutSo from "@/stores/layout"
 import { SubjectsStore } from "@/stores/stacks/connection/subjects"
 import { LOAD_STATE } from "@/stores/stacks/utils"
 import { SubjectNode } from "@/types/Subject"
-import { emptyCopy, firstListenCopy, LEGEND, listenHintCopy, statusLines } from "@/utils/subjects/copy"
+import { emptyCopy, listenHintCopy, statusLines } from "@/utils/subjects/copy"
 import { isCatchAll } from "@/utils/subjects/filter"
 import { buildSubjectTree, filterTree, flattenHits } from "@/utils/subjects/tree"
-import { Button, CircularLoadingCmp, TextInput } from "@priolo/jack"
+import { watchFilter } from "@/utils/subjects/watch"
+import { Button, FindInputHeader, OptionsCmp, TextInput } from "@priolo/jack"
 import { useStore } from "@priolo/jon"
-import { FunctionComponent, useEffect, useMemo, useState } from "react"
+import { FunctionComponent, useEffect, useMemo } from "react"
 import clsCardBoring from "../../CardBoringDef.module.css"
 import clsCardRedeye from "../../CardCyanDef.module.css"
 import SubjectTree from "./Tree"
@@ -27,19 +28,22 @@ const SubjectsView: FunctionComponent<Props> = ({
 	useStore(subjectsSo.state.group)
 	useStore(layoutSo)
 
-	const [textFind, setTextFind] = useState(subjectsSa.textSearch ?? "")
-
 	useEffect(() => {
 		subjectsSo.fetchIfVoid()
 	}, [])
 
-	const handleSearchChange = (value: string) => {
-		setTextFind(value)
-		subjectsSo.setTextSearch(value)
-	}
 	const handleSelect = (node: SubjectNode) => {
 		if (node.remainder) return
-		if (node.hit) subjectsSo.openHit(node.hit)
+		if (node.hit?.expandable && node.hit.kind != "occupied") {
+			subjectsSo.openHit(node.hit)
+		}
+	}
+	const handleWatch = (node: SubjectNode) => {
+		if (node.remainder) return
+		const name = watchFilter(node)
+		if (!name) return
+		subjectsSo.setSelect(node.path)
+		subjectsSo.watch(name)
 	}
 	const handleFilterChange = (value: string) => {
 		subjectsSo.setListenHint(null)
@@ -87,10 +91,17 @@ const SubjectsView: FunctionComponent<Props> = ({
 		icon={<SubjectsIcon />}
 		store={subjectsSo}
 		actionsRender={<>
-			<Button
-				children="REFRESH"
-				onClick={() => subjectsSo.fetch()}
+			<OptionsCmp
+				style={{ marginLeft: 5, backgroundColor: "rgba(255,255,255,.4)" }}
+				store={subjectsSo}
 			/>
+			<FindInputHeader
+				value={subjectsSa.textSearch}
+				onChange={text => subjectsSo.setTextSearch(text)}
+			/>
+		</>}
+	>
+		<div className={cls.filter}>
 			<Button
 				select={subjectsSa.coreEnabled}
 				children="CORE"
@@ -101,12 +112,7 @@ const SubjectsView: FunctionComponent<Props> = ({
 				children="JETSTREAM"
 				onClick={() => subjectsSo.toggleJetStream()}
 			/>
-		</>}
-	>
-		<div className={cls.legend}>
-			{LEGEND.map(line => <div key={line}>{line}</div>)}
 		</div>
-
 		{subjectsSa.coreEnabled && (
 			<div className={cls.filter}>
 				<div className="jack-lbl-prop">LISTEN FOR</div>
@@ -133,25 +139,6 @@ const SubjectsView: FunctionComponent<Props> = ({
 
 		{hint && <div className={cls.hint}>{hint}</div>}
 
-		<div className={cls.filter}>
-			<div className="jack-lbl-prop">FIND</div>
-			<TextInput
-				style={{ flex: 1 }}
-				value={textFind}
-				placeholder="type part of a name"
-				onChange={handleSearchChange}
-			/>
-		</div>
-
-		{(listening || jsLoading) && (
-			<div className={cls.banner}>
-				<CircularLoadingCmp style={{ width: 14, height: 14 }} />
-				{listening
-					? firstListenCopy(subjectsSa.filter.trim(), subjectsSa.listenMs)
-					: "Reading stored names…"}
-			</div>
-		)}
-
 		{firstPaint
 			? null
 			: <div className={cls.tree}>
@@ -159,16 +146,25 @@ const SubjectsView: FunctionComponent<Props> = ({
 					nodes={tree}
 					select={subjectsSa.select}
 					onSelect={handleSelect}
+					onWatch={handleWatch}
 					empty={empty}
 					occupied={subjectsSa.occupied}
 					occupiedLoading={subjectsSa.occupiedLoading}
+					reveal={!!subjectsSa.textSearch?.trim()}
+					openPaths={subjectsSa.openPaths}
+					setOpen={(path, open) => subjectsSo.setOpenPaths({
+						...subjectsSo.state.openPaths,
+						[path]: open,
+					})}
 				/>
 			</div>
 		}
 
-		<div className={cls.status}>
-			{status.map(line => <div key={line}>{line}</div>)}
-		</div>
+		{status.length > 0 && (
+			<div className={cls.status}>
+				{status.map(line => <div key={line}>{line}</div>)}
+			</div>
+		)}
 	</FrameworkCard>
 }
 

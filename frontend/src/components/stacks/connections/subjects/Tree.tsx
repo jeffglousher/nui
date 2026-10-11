@@ -1,21 +1,34 @@
 import { OccupiedCatalog, SubjectNode } from "@/types/Subject"
-import { leafTitle } from "@/utils/subjects/copy"
+import { rowChip } from "@/utils/subjects/chip"
+import { leafTitle, subjectCopyValue } from "@/utils/subjects/copy"
 import { occupiedKey } from "@/utils/subjects/tree"
-import { FunctionComponent, memo, useState } from "react"
+import { CopyButton } from "@priolo/jack"
+import { FunctionComponent, memo } from "react"
 import cls from "./Tree.module.css"
 
 interface Props {
 	nodes: SubjectNode[]
 	select?: string
 	onSelect?: (node: SubjectNode) => void
+	onWatch?: (node: SubjectNode) => void
 	empty?: string
 	occupied?: Record<string, OccupiedCatalog>
 	occupiedLoading?: string
+	reveal?: boolean
+	openPaths?: Record<string, boolean>
+	setOpen?: (path: string, open: boolean) => void
 }
 
-const SubjectTree: FunctionComponent<Props> = ({ nodes, select, onSelect, empty, occupied, occupiedLoading }) => {
+const SubjectTree: FunctionComponent<Props> = ({
+	nodes, select, onSelect, onWatch, empty, occupied, occupiedLoading, reveal, openPaths, setOpen,
+}) => {
 	if (!nodes || nodes.length == 0) {
 		return <div className={`jack-lbl-empty color-fg ${cls.empty}`}>{empty ?? "No names to show."}</div>
+	}
+	const paths = openPaths ?? {}
+	const setPath = (path: string, open: boolean) => {
+		if (paths[path] == open) return
+		setOpen?.(path, open)
 	}
 	return <div className={cls.root}>
 		{nodes.map(node => (
@@ -24,9 +37,12 @@ const SubjectTree: FunctionComponent<Props> = ({ nodes, select, onSelect, empty,
 				node={node}
 				select={select}
 				onSelect={onSelect}
-				depth={0}
+				onWatch={onWatch}
 				occupied={occupied}
 				occupiedLoading={occupiedLoading}
+				reveal={!!reveal}
+				openPaths={paths}
+				setOpen={setPath}
 			/>
 		))}
 	</div>
@@ -38,9 +54,12 @@ interface NodeProps {
 	node: SubjectNode
 	select?: string
 	onSelect?: (node: SubjectNode) => void
-	depth: number
+	onWatch?: (node: SubjectNode) => void
 	occupied?: Record<string, OccupiedCatalog>
 	occupiedLoading?: string
+	reveal: boolean
+	openPaths: Record<string, boolean>
+	setOpen: (path: string, open: boolean) => void
 }
 
 function occKeyFor(node: SubjectNode): string | null {
@@ -49,64 +68,60 @@ function occKeyFor(node: SubjectNode): string | null {
 	return occupiedKey(stream.name, stream.pattern)
 }
 
-const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, depth, occupied, occupiedLoading }) => {
+const TreeNode: FunctionComponent<NodeProps> = memo(({
+	node, select, onSelect, onWatch, occupied, occupiedLoading, reveal, openPaths, setOpen,
+}) => {
 	const hasChildren = node.children.length > 0
-	const [open, setOpen] = useState(depth < 2)
-	const selected = !!node.hit && node.path == select
+	const open = reveal || !!openPaths[node.path]
+	const selected = !node.remainder && !!select && node.path == select
 	const key = occKeyFor(node)
 	const occ = key ? occupied?.[key] : undefined
 	const loadingOcc = !!key && occupiedLoading == key
 	const loadedEmpty = !!node.hit?.expandable && !!occ && (occ.subjects?.length ?? 0) == 0 && !hasChildren
-	const clsNode = `${cls.node} ${selected ? cls.selected : ""} ${node.remainder ? cls.remainder : ""}`
+	const canOpen = hasChildren || (!!node.hit?.expandable && !loadedEmpty)
+	const clsNode = `${cls.node} ${selected ? cls.selected : ""} ${node.remainder ? cls.remainder : ""} ${node.stacked ? cls.stacked : ""}`
 	const title = node.remainder
 		? node.segment
 		: node.hit
 			? leafTitle(node.path, node.hit.core?.count, node.hit.streams)
 			: node.path
+	const chip = rowChip(node.hit, node.segment)
+	const copyValue = subjectCopyValue(node)
 
-	const handleTwist = (e: React.MouseEvent) => {
-		e.stopPropagation()
-		if (hasChildren) {
-			setOpen(!open)
-			return
-		}
-		if (node.hit?.expandable && !loadedEmpty) {
-			setOpen(true)
-			onSelect?.(node)
-		}
+	const toggleOpen = () => {
+		if (node.remainder || !canOpen) return
+		const next = !open
+		if (!reveal) setOpen(node.path, next)
+		if (next && node.hit?.expandable && !occ && !loadingOcc) onSelect?.(node)
 	}
-	const handleClick = () => {
+
+	const watch = () => {
 		if (node.remainder) return
-		if (node.hit?.expandable) {
-			setOpen(true)
-			if (!loadedEmpty) onSelect?.(node)
-			return
-		}
-		if (node.hit) onSelect?.(node)
-		else if (hasChildren) setOpen(!open)
+		onWatch?.(node)
 	}
-
-	const kindChip = (node.hit?.kind == "kv" || node.hit?.streams.some(s => s.kind == "kv")) ? "KV"
-		: (node.hit?.kind == "object" || node.hit?.streams.some(s => s.kind == "object")) ? "FILES"
-			: null
 
 	return (
 		<div>
-			<div className={clsNode} onClick={handleClick} title={title}>
-				<div className={cls.twist} onClick={handleTwist}>
-					{hasChildren ? (open ? "▾" : "▸") : node.hit?.expandable && !loadedEmpty ? "▸" : ""}
-				</div>
+			<div className={`${clsNode} jack-hover-container`} onClick={watch} title={title}>
+				{canOpen ? (
+					<div className={cls.twist} title="Open" onClick={e => { e.stopPropagation(); toggleOpen() }}>
+						{open ? "▾" : "▸"}
+					</div>
+				) : (
+					<div className={cls.twistPad} />
+				)}
 				<div className={cls.segment}>{node.segment}</div>
 				<div className={cls.meta}>
-					{node.hit?.core && <span className={`${cls.chip} ${cls.core}`}>live</span>}
-					{kindChip && <span className={`${cls.chip} ${cls.js}`} title={kindChip == "KV" ? "key/value bucket" : "object store"}>{kindChip}</span>}
-					{node.hit?.streams.filter(s => s.kind != "kv" && s.kind != "object").map(s => (
-						<span key={s.name} className={`${cls.chip} ${cls.js}`} title={`kept by ${s.name}`}>{s.name}</span>
-					))}
+					{copyValue && (
+						<span onClick={e => e.stopPropagation()}>
+							<CopyButton absolute value={copyValue} label="COPY SUBJECT" />
+						</span>
+					)}
+					{chip && <span className={`${cls.chip} ${chip.kind == "live" ? cls.core : cls.js}`} title={chip.title}>{chip.label}</span>}
 					{loadingOcc && <span className={cls.count}>loading</span>}
 					{loadedEmpty && !occ?.error && <span className={cls.count}>none stored</span>}
 					{occ?.error && <span className={cls.count}>{occ.error}</span>}
-					{!node.hit && !node.remainder && node.names > 0 && !open && <span className={cls.count}>{node.names}</span>}
+					{canOpen && !open && node.names > 1 && <span className={cls.count}>{node.names}</span>}
 					{node.remainder && <span className={cls.count}>{node.names}</span>}
 				</div>
 			</div>
@@ -118,9 +133,12 @@ const TreeNode: FunctionComponent<NodeProps> = memo(({ node, select, onSelect, d
 							node={child}
 							select={select}
 							onSelect={onSelect}
-							depth={depth + 1}
+							onWatch={onWatch}
 							occupied={occupied}
 							occupiedLoading={occupiedLoading}
+							reveal={reveal}
+							openPaths={openPaths}
+							setOpen={setOpen}
 						/>
 					))}
 				</div>
