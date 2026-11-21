@@ -64,16 +64,18 @@ describe("SUBJECTS requests", () => {
 		expect(s.state.coreSampling).toBe(false)
 	})
 
-	it("opens a new live message card and leaves the existing one alone", () => {
+	it.each([
+		["orders.created", true], ["orders.>", true], ["$KV.shop.>", false],
+	] as const)("opens %s in a separate live card", (subject, noSysMessages) => {
 		const s = store()
 		const existing = { subscriptions: [{ subject: "other.>" }], pause: true, messages: [{ subject: "other.one" }] }
 		s.state.linked = { state: structuredClone(existing) }
 		s.state.group = { add: vi.fn(), getIndexByView: () => 0 }
 		const view = {} as MessagesStore
 		vi.mocked(buildStore).mockReturnValue(view)
-		s.openLive("orders.created")
+		s.openLive(subject)
 		expect(buildStore).toHaveBeenCalledWith(expect.objectContaining({
-			type: DOC_TYPE.MESSAGES, connectionId: "connection", subscriptions: [{ subject: "orders.created" }],
+			type: DOC_TYPE.MESSAGES, connectionId: "connection", subscriptions: [{ subject }], noSysMessages,
 		}))
 		expect(s.state.group.add).toHaveBeenCalledWith(expect.objectContaining({ view }))
 		expect(s.state.linked.state).toEqual(existing)

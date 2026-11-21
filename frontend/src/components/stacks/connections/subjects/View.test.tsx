@@ -45,6 +45,18 @@ describe("SUBJECTS rendering", () => {
 		expect(markup).not.toMatch(/role="button"|tabindex=|aria-expanded=|<button/)
 	})
 
+	it.each([["orders.>", true], ["orders", false]])("offers a live subscription for a catalog pattern but skips a grouping folder (%s)", (select, canOpen) => {
+		const store = { state: {
+			group: { state: {} }, coreEnabled: false, jetstreamEnabled: true, select,
+			jetstream: { streams: [{ name: "ORDERS", kind: "stream", subjects: [
+				{ subject: "orders.>", pattern: "orders.>", kind: "pattern" },
+			] }] },
+		} } as unknown as SubjectsStore
+		const markup = renderToStaticMarkup(<SubjectsView store={store} />)
+		expect(markup.includes("OPEN LIVE MESSAGES")).toBe(canOpen)
+		expect(markup).not.toContain("VIEW HISTORY")
+	})
+
 	it("offers history for a literal capture even if another stream transforms it", () => {
 		const subject = "orders"
 		const store = { state: {

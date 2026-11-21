@@ -215,7 +215,7 @@ const setup = {
 				type: DOC_TYPE.MESSAGES,
 				connectionId: store.state.connectionId,
 				subscriptions: [{ subject }],
-				noSysMessages: store.state.noSysMessages,
+				noSysMessages: store.state.noSysMessages && !subject.startsWith("$") && !subject.startsWith("_INBOX"),
 			})
 			const group = store.state.group
 			group.add({ view, index: group.getIndexByView(store) + 1, anim: true })

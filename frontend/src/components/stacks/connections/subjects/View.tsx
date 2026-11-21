@@ -54,8 +54,8 @@ const SubjectsView: FunctionComponent<Props> = ({
 	const visibleHits = useMemo(() => filterHits(hits, subjectsSa.textSearch), [hits, subjectsSa.textSearch])
 	const tree = useMemo(() => buildSubjectTree(visibleHits), [visibleHits])
 	const selected = visibleHits.find(hit => hit.subject === subjectsSa.select)
-	const isConcrete = selected && !/[*>]/.test(selected.subject) && canListen(selected.subject)
-	const historyStreams = isConcrete && !selected.subject.includes(",")
+	const canOpenLive = selected && canListen(selected.subject)
+	const historyStreams = canOpenLive && !/[*>,]/.test(selected.subject)
 		? [...new Set(selected.streams
 			.filter(stream => stream.kind === "stream" && (stream.count > 0 || !stream.expandable))
 			.map(stream => stream.name))]
@@ -151,7 +151,7 @@ const SubjectsView: FunctionComponent<Props> = ({
 				</div>
 			}
 
-			{isConcrete && (
+			{canOpenLive && (
 				<div className={cls.actions}>
 					<code>{selected.subject}</code>
 					<div className={cls.filter}>
