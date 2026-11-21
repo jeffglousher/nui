@@ -9,6 +9,11 @@ vi.mock("@/api/subjects", () => ({ default: { jetstream: vi.fn(), core: vi.fn(),
 
 vi.mock("@/api/streams", () => ({ default: { get: vi.fn() } }))
 
+vi.mock("@/stores/docs/cards", () => ({ drawerCardsSo: {} }))
+vi.mock("@/api/messages", () => ({ default: { subscriptionIndex: vi.fn() } }))
+import messagesApi from "@/api/messages"
+vi.mock("@priolo/jack", () => ({ docsSo: { getAllCards: () => [] }, focusSo: { focus: vi.fn() }, utils: { findInRoot: vi.fn() } }))
+import { focusSo, utils } from "@priolo/jack"
 import setup from "./index"
 import streamsApi from "@/api/streams"
 import { buildStore } from "@/stores/docs/utils/factory"
@@ -66,19 +71,55 @@ describe("SUBJECTS requests", () => {
 
 	it.each([
 		["orders.created", true], ["orders.>", true], ["$KV.shop.>", false],
-	] as const)("opens %s in a separate live card", (subject, noSysMessages) => {
+	] as const)("creates a Messages card for %s when none is open", async (subject, noSysMessages) => {
 		const s = store()
-		const existing = { subscriptions: [{ subject: "other.>" }], pause: true, messages: [{ subject: "other.one" }] }
-		s.state.linked = { state: structuredClone(existing) }
-		s.state.group = { add: vi.fn(), getIndexByView: () => 0 }
+		vi.mocked(messagesApi.subscriptionIndex).mockResolvedValue([{ subject: "saved" }])
+		s.state.group = { state: { all: [] }, add: vi.fn(), getIndexByView: () => 0 }
 		const view = {} as MessagesStore
 		vi.mocked(buildStore).mockReturnValue(view)
-		s.openLive(subject)
+		await s.openLive(subject)
 		expect(buildStore).toHaveBeenCalledWith(expect.objectContaining({
-			type: DOC_TYPE.MESSAGES, connectionId: "connection", subscriptions: [{ subject }], noSysMessages,
+			type: DOC_TYPE.MESSAGES, connectionId: "connection", subscriptions: [{ subject, favorite: false }, { subject: "saved", favorite: true, disabled: true }], noSysMessages,
 		}))
 		expect(s.state.group.add).toHaveBeenCalledWith(expect.objectContaining({ view }))
-		expect(s.state.linked.state).toEqual(existing)
+	})
+
+	it("uses the latest selection when saved subscriptions are still loading", async () => {
+		const s = store()
+		s.state.group = { state: { all: [] }, add: vi.fn(), getIndexByView: () => 0 }
+		const first = deferred<[]>()
+		vi.mocked(messagesApi.subscriptionIndex).mockReturnValueOnce(first.promise).mockResolvedValueOnce([])
+		const pending = s.openLive("orders.old")
+		await s.openLive("orders.new")
+		first.resolve([])
+		await pending
+		expect(buildStore).toHaveBeenCalledOnce()
+		expect(buildStore).toHaveBeenCalledWith(expect.objectContaining({
+			subscriptions: [{ subject: "orders.new", favorite: false }],
+		}))
+	})
+
+	it("switches the open Messages card for this connection and keeps its favorites", () => {
+		const s = store()
+		const view = {
+			state: { type: DOC_TYPE.MESSAGES, connectionId: "connection", subscriptions: [
+				{ subject: "saved", favorite: true }, { subject: "old" },
+			] },
+			setSubscriptions: vi.fn(), setNoSysMessages: vi.fn(), setPause: vi.fn(),
+			setSubscriptionsOpen: vi.fn(), sendSubscriptions: vi.fn(),
+		}
+		const other = { state: { ...view.state, connectionId: "other" } }
+		s.state.group = { state: { all: [other, { state: { linked: view } }] } }
+		vi.mocked(utils.findInRoot).mockReturnValue(view as unknown as MessagesStore)
+		s.openLive("orders.>")
+		expect(view.setSubscriptions).toHaveBeenCalledWith([
+			{ subject: "orders.>", favorite: false }, { subject: "saved", favorite: true, disabled: true },
+		])
+		expect(view.setPause).toHaveBeenCalledWith(false)
+		expect(view.sendSubscriptions).toHaveBeenCalledOnce()
+		expect(utils.findInRoot).toHaveBeenCalledWith(s.state.group.state.all, { type: DOC_TYPE.MESSAGES, connectionId: "connection" })
+		expect(focusSo.focus).toHaveBeenCalledWith(view)
+		expect(buildStore).not.toHaveBeenCalled()
 	})
 
 	it("opens history using the explicitly chosen stream and subject", async () => {

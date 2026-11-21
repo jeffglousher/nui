@@ -95,8 +95,12 @@ const setup = {
 				store.state.connectionId,
 				{ store, manageAbort: true }
 			)
-			subscriptions.forEach(s => s.favorite = s.disabled = true)
-			store.setSubscriptions(subscriptions)
+			const current = store.state.subscriptions ?? []
+			const saved = subscriptions.map(sub => ({ ...sub, favorite: true, disabled: true }))
+			store.setSubscriptions([
+				...current.map(sub => saved.some(s => s.subject == sub.subject) ? { ...sub, favorite: true } : sub),
+				...saved.filter(sub => !current.some(s => s.subject == sub.subject)),
+			])
 		},
 		async fetchIfVoid(_: void, store?: MessagesStore) {
 			if (store.state.subscriptions == null) await store.fetch()

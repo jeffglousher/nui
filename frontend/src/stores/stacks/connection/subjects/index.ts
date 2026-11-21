@@ -1,3 +1,5 @@
+import messagesApi from "@/api/messages"
+import { drawerCardsSo } from "@/stores/docs/cards"
 import subjectsApi from "@/api/subjects"
 import streamsApi from "@/api/streams"
 import cnnSo from "@/stores/connections"
@@ -7,6 +9,7 @@ import { DOC_TYPE } from "@/types"
 import { OccupiedCatalog, SubjectSource, CoreCatalog, JetStreamCatalog } from "@/types/Subject"
 import { canListen, FILTER_EMPTY, normalizeListenFilter, validateListenFilter } from "@/utils/subjects/filter"
 import { occupiedKey } from "@/utils/subjects/tree"
+import { docsSo, focusSo, utils } from "@priolo/jack"
 import { mixStores, StoreOf } from "@priolo/jon"
 import loadBaseSetup, { LoadBaseStore } from "../../loadBase"
 import type { MessagesStore } from "../messages"
@@ -34,6 +37,7 @@ const setup = {
 		coreAbort: <AbortController>null,
 		catalogGen: 0,
 		historyPending: false,
+		liveRequest: <AbortController>null,
 		historyRequest: <AbortController>null,
 
 		textSearch: <string>null,
@@ -209,15 +213,45 @@ const setup = {
 			}
 		},
 
-		openLive(subject: string, store?: SubjectsStore) {
+		async openLive(subject: string, store?: SubjectsStore) {
 			if (!canListen(subject)) return
-			const view = buildStore<MessagesStore>({
-				type: DOC_TYPE.MESSAGES,
-				connectionId: store.state.connectionId,
-				subscriptions: [{ subject }],
-				noSysMessages: store.state.noSysMessages && !subject.startsWith("$") && !subject.startsWith("_INBOX"),
-			})
-			const group = store.state.group
+			const { connectionId, group } = store.state
+			const match = { type: DOC_TYPE.MESSAGES, connectionId }
+			const findCard = () => (utils.findInRoot(group.state.all, match)
+				?? utils.findInRoot(docsSo.getAllCards(), match)) as MessagesStore
+			store.state.liveRequest?.abort()
+			let card = findCard()
+			let favorites = card?.state.subscriptions?.filter(sub => sub.favorite)
+			if (!favorites) {
+				const request = new AbortController()
+				store.state.liveRequest = request
+				try {
+					const saved = await messagesApi.subscriptionIndex(connectionId, { store, signal: request.signal, loading: false })
+					if (request.signal.aborted || !Array.isArray(saved)) return
+					card = findCard()
+					favorites = card?.state.subscriptions?.filter(sub => sub.favorite) ?? saved
+				} catch {
+					return // The API logs request failures.
+				} finally {
+					if (store.state.liveRequest == request) store.state.liveRequest = null
+				}
+			}
+			const subscriptions = [
+				{ subject, favorite: favorites.some(sub => sub.subject == subject) },
+				...favorites.filter(sub => sub.subject != subject).map(sub => ({ ...sub, favorite: true, disabled: true })),
+			]
+			const noSysMessages = store.state.noSysMessages && !subject.startsWith("$") && !subject.startsWith("_INBOX")
+			if (card) {
+				card.setSubscriptions(subscriptions)
+				card.setNoSysMessages(noSysMessages)
+				card.setSubscriptionsOpen(false)
+				card.setPause(false)
+				card.sendSubscriptions()
+				if (card.state.group == drawerCardsSo && !drawerCardsSo.isOpen()) drawerCardsSo.toggle()
+				focusSo.focus(card)
+				return
+			}
+			const view = buildStore<MessagesStore>({ ...match, subscriptions, noSysMessages })
 			group.add({ view, index: group.getIndexByView(store) + 1, anim: true })
 		},
 
@@ -248,6 +282,7 @@ const setup = {
 			store.state.catalogGen++
 			store.setOccupiedLoading({})
 			store.state.historyRequest?.abort()
+			store.state.liveRequest?.abort()
 			store.fetchAbort()
 			store.abortCore()
 		},

@@ -3,7 +3,8 @@
 The SUBJECTS card lists JetStream capture patterns, stored subject names and
 Core subjects observed during a sample. Expanding a JetStream pattern or bucket
 loads its stored subjects. Select a subject or wildcard pattern and choose OPEN
-LIVE MESSAGES to subscribe in a separate card. For a concrete subject, choose
+LIVE MESSAGES to switch the open Messages card for that connection to the selected
+subscription. The card keeps its messages, text filter and favorites. A card opens if needed. For a concrete subject, choose
 a stream to view its retained messages.
 
 Enter a subject filter or choose ALL (`>`), then select SAMPLE to observe Core
