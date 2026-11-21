@@ -13,9 +13,9 @@ function index(connectionId: string, opt?: CallOptions): Promise<StreamInfo[]> {
 }
 
 /** GET */
-async function get(connectionId: string, streamName: string, opt?: CallOptions): Promise<StreamInfo> {
-	opt.noCamel = true
-	const resSnake = await ajax.get(`connection/${connectionId}/stream/${streamName}`, null, opt)
+async function get(connectionId: string, streamName: string, opt?: CallOptions, subject?: string): Promise<StreamInfo> {
+	const query = subject ? `?subject=${encodeURIComponent(subject)}` : ""
+	const resSnake = await ajax.get(`connection/${connectionId}/stream/${streamName}${query}`, null, { ...opt, noCamel: true })
 	const resCamel: StreamInfo = snakeToCamel(resSnake)
 	if ( !!resCamel ) resCamel.state.subjects = resSnake.state.subjects
 	return resCamel
@@ -62,11 +62,11 @@ async function messages(connectionId: string, streamName: string, filter: Stream
 	}
 	query += filter.interval != null ? `interval=${filter.interval.toString()}&` : ""
 	query += (!!filter.subjects && filter.subjects.length > 0) 
-		? `subjects=${filter.subjects.join(",")}` 
+		? `subjects=${encodeURIComponent(filter.subjects.join(","))}`
 		: ""
 
 	const messages: Message[] = await ajax.get(`connection/${connectionId}/stream/${streamName}/messages?${query}`, null, opt)
-	return messages.map(m => {
+	return (messages ?? []).map(m => {
 		m.payload = atob(m.payload)
 		return m
 	})

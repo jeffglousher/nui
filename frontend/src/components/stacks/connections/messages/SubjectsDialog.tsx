@@ -81,7 +81,7 @@ const SubjectsDialog: FunctionComponent<Props> = ({
 				check={allCheck}
 				onChange={handleAllDisable}
 			/>
-			SUBJECTS
+			SUBSCRIPTIONS
 		</div>}
 		store={msgSo}
 		width={250}

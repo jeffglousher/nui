@@ -123,6 +123,7 @@ const setup = {
 			await store.fetchWithFilter({
 				interval: -globalInterval,
 				startSeq: store.state.stream.state.lastSeq,
+				subjects: [...(store.state.filter.subjects ?? []), ...store.state.subjectsCustom],
 			})
 			await loadBaseSetup.actions.fetch(_, store)
 		},

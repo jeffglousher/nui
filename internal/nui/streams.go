@@ -41,6 +41,12 @@ func (a *App) HandleShowStream(c *fiber.Ctx) error {
 	if streamName == "" {
 		return c.Status(422).JSON("stream_name is required")
 	}
+	subject := c.Query("subject")
+	if subject == "" {
+		subject = ">"
+	} else if validateListenFilter(subject) != nil || strings.ContainsAny(subject, "*>") {
+		return c.Status(422).JSON(NewError("a subject name is required"))
+	}
 	js, ok, err := a.jsOrFail(c)
 	if !ok {
 		return err
@@ -49,7 +55,7 @@ func (a *App) HandleShowStream(c *fiber.Ctx) error {
 	if err != nil {
 		return a.logAndFiberError(c, err, 422)
 	}
-	info, err := stream.Info(c.Context(), jetstream.WithSubjectFilter(">"))
+	info, err := stream.Info(c.Context(), jetstream.WithSubjectFilter(subject))
 	if err != nil {
 		return a.logAndFiberError(c, err, 500)
 	}

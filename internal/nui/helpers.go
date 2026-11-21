@@ -9,12 +9,16 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
-func (a *App) jsOrFail(c *fiber.Ctx) (jetstream.JetStream, bool, error) {
-	conn, err := a.nui.ConnPool.Get(c.Params("connection_id"))
+func (a *App) jetStreamForConnection(id string) (jetstream.JetStream, error) {
+	conn, err := a.nui.ConnPool.Get(id)
 	if err != nil {
-		return nil, false, a.logAndFiberError(c, err, 422)
+		return nil, err
 	}
-	js, err := jetstream.New(conn.Conn)
+	return jetstream.New(conn.Conn)
+}
+
+func (a *App) jsOrFail(c *fiber.Ctx) (jetstream.JetStream, bool, error) {
+	js, err := a.jetStreamForConnection(c.Params("connection_id"))
 	if err != nil {
 		return nil, false, a.logAndFiberError(c, err, 422)
 	}

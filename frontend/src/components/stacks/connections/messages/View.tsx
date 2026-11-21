@@ -90,7 +90,7 @@ const MessagesView: FunctionComponent<Props> = ({
 			/>
 			<Button
 				select={msgSa.subscriptionsOpen}
-				children="SUBJECTS"
+				children="SUBSCRIPTIONS"
 				onClick={handleClickSubs}
 
 			/>
